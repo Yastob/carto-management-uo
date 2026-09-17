@@ -28,10 +28,35 @@ disponibles quand tu passes d'une page à l'autre, tant que l'onglet du navigate
 reste ouvert — pas besoin de réuploader. Cette mémoire vit uniquement dans cet onglet
 de navigateur (`sessionStorage`), jamais envoyée nulle part, effacée à sa fermeture.
 
-**[index.html](index.html)** charge les 3 fichiers et affiche la cartographie interactive.
+**[index.html](index.html)** charge les fichiers et affiche la cartographie interactive.
 Seul `collaborateurs.xlsx` est obligatoire (il donne déjà la hiérarchie SM à lui
 seul) ; Rattachements et Réunions sont facultatifs, indépendamment l'un de l'autre.
 Rien n'est envoyé sur un serveur : tout est lu et interprété dans le navigateur.
+
+### Plusieurs Senior Managers, plusieurs fichiers
+
+`rattachements.xlsx` et `reunions.xlsx` acceptent **plusieurs fichiers à la fois** dans
+la Visualisation : chaque Senior Manager continue de produire son propre fichier sur son
+propre périmètre (rien ne change dans les 2 éditeurs), et on dépose tous les fichiers
+ensemble dans index.html pour obtenir la vue globale. Un fichier ajouté par erreur peut
+être retiré individuellement (bouton "Retirer").
+
+La fusion se fait champ par champ, jamais fichier entier contre fichier entier : un champ
+resté vide dans un fichier ne peut jamais écraser une valeur réelle apportée par un autre
+(utile car un rattachements.xlsx téléchargé contient toujours tout le monde — le filtre de
+périmètre n'affecte que l'affichage). Les tags sont fusionnés en "OU" (coché si au moins un
+fichier le coche).
+
+Un **rapport de cohérence** apparaît automatiquement dès qu'un souci est détecté :
+- 🔴 Erreurs : un même collaborateur a des valeurs différentes selon les fichiers de
+  rattachements ; un id référencé n'existe pas (ou plus) dans collaborateurs.xlsx ; deux
+  fichiers de réunions utilisent le même id pour des réunions différentes ; une réunion
+  référence un animateur/participant inconnu.
+- 🟠 Avertissements : deux réunions de fichiers différents semblent être un doublon (même
+  animateur, mêmes participants).
+
+Chaque message précise le(s) fichier(s) concerné(s) pour permettre une correction rapide
+à la source, avant de recharger le fichier corrigé.
 
 ## Workflow
 

@@ -9,6 +9,11 @@ window.CartoState = (function () {
     collabPrev: "carto_collaborateurs_prev_rows",
     rattach: "carto_rattachements_rows",
     points: "carto_reunions_rows",
+    // Multi-fichiers (un rattachements.xlsx / reunions.xlsx par Senior Manager), utilisé
+    // uniquement par la Visualisation — indépendant des clés mono-fichier ci-dessus,
+    // qui restent celles des 2 éditeurs.
+    rattachFiles: "carto_rattachements_files",
+    pointsFiles: "carto_reunions_files",
   };
 
   function save(key, rows) {

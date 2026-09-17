@@ -50,41 +50,29 @@
         <div class="upload-step-head">
           <span class="step-badge">2</span>
           <strong>Rattachements</strong>
-          <span class="tag-optional">Facultatif — ajoute Manager/CP, compte de référence, tags</span>
+          <span class="tag-optional">Facultatif — un fichier par Senior Manager, ajoute-en autant que besoin</span>
         </div>
-        <div id="rattach-choice">
-          <label class="dropzone" id="dz-rattach">
-            <strong>Glisse-dépose</strong> rattachements.xlsx ici, ou clique pour choisir
-            <input type="file" id="file-rattach" accept=".xlsx">
-          </label>
-          <button class="btn btn-secondary btn-small" id="btn-skip-rattach">Ignorer ce fichier</button>
-        </div>
-        <div class="loaded-row" id="loaded-rattach" style="display:none">
-          <span class="ok-icon">✓</span>
-          <span class="loaded-name" id="loaded-rattach-name"></span>
-          <button class="btn btn-secondary btn-small" id="btn-change-rattach">Changer de fichier</button>
-        </div>
+        <label class="dropzone" id="dz-rattach">
+          <strong>Glisse-dépose</strong> un ou plusieurs rattachements.xlsx ici, ou clique pour choisir
+          <input type="file" id="file-rattach" accept=".xlsx" multiple>
+        </label>
+        <div id="loaded-rattach-list" class="loaded-files-list"></div>
       </div>
 
       <div class="upload-step" id="step-points">
         <div class="upload-step-head">
           <span class="step-badge">3</span>
           <strong>Réunions</strong>
-          <span class="tag-optional">Facultatif — ajoute les réunions de management</span>
+          <span class="tag-optional">Facultatif — un fichier par Senior Manager, ajoute-en autant que besoin</span>
         </div>
-        <div id="points-choice">
-          <label class="dropzone" id="dz-points">
-            <strong>Glisse-dépose</strong> reunions.xlsx ici, ou clique pour choisir
-            <input type="file" id="file-points" accept=".xlsx">
-          </label>
-          <button class="btn btn-secondary btn-small" id="btn-skip-points">Ignorer ce fichier</button>
-        </div>
-        <div class="loaded-row" id="loaded-points" style="display:none">
-          <span class="ok-icon">✓</span>
-          <span class="loaded-name" id="loaded-points-name"></span>
-          <button class="btn btn-secondary btn-small" id="btn-change-points">Changer de fichier</button>
-        </div>
+        <label class="dropzone" id="dz-points">
+          <strong>Glisse-dépose</strong> un ou plusieurs reunions.xlsx ici, ou clique pour choisir
+          <input type="file" id="file-points" accept=".xlsx" multiple>
+        </label>
+        <div id="loaded-points-list" class="loaded-files-list"></div>
       </div>
+
+      <div id="consistency-report" class="consistency-report" style="display:none"></div>
 
       <div class="step-actions">
         <div class="muted-note" id="continue-hint">Charge le fichier Collaborateurs pour continuer.</div>

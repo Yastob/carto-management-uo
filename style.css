@@ -580,6 +580,15 @@ main {
 .loaded-row .loaded-name { font-weight: 600; }
 .loaded-row .btn { margin-left: auto; }
 
+.loaded-files-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+
+.consistency-report { margin-top: 16px; }
+.consistency-report h3 { font-size: 14px; margin: 14px 0 8px; }
+.consistency-report h3.errors { color: var(--status-critical); }
+.consistency-report h3.warnings { color: var(--status-warning); }
+.consistency-report ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.consistency-report li { font-size: 13px; line-height: 1.5; }
+
 .step-actions {
   display: flex;
   justify-content: space-between;

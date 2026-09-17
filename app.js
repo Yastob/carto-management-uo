@@ -7,6 +7,16 @@
     { key: "tag_consultant_isole", label: "Consultant isolé", color: "--slot-magenta" },
   ];
 
+  // Déclaré tout en haut (et non près de son usage plus bas) : hydrateFromSession()
+  // s'exécute très tôt au chargement du script et peut restaurer des fichiers de session,
+  // déclenchant un calcul de fusion qui lit cette constante — une déclaration plus tardive
+  // provoquerait une erreur de zone morte temporelle (TDZ) à ce moment-là.
+  const RATTACH_TEXT_FIELDS = [
+    { key: "manager_id", label: "Manager" },
+    { key: "chef_de_projet_id", label: "Chef de projet" },
+    { key: "compte_reference", label: "Compte de référence" },
+  ];
+
   // Palette Okabe-Ito : conçue pour rester distinguable en cas de daltonisme
   // (protanopie/deutéranopie/tritanopie), volontairement sans paire rouge/vert.
   const PERIODICITE_ORDER = ["Hebdomadaire", "2 fois par mois", "Mensuel", "Tous les 2 mois", "Ponctuel"];
@@ -50,7 +60,9 @@
   let hoveredCircleId = null;
   let hautPotentielNodes = []; // {id, size} : pastille jaune toujours visible, en plus du survol
   let state = { collaborateurs: [], points: [] };
-  let raw = { collab: null, rattach: null, points: null };
+  // rattachFiles/pointsFiles : {name, rows}[] — un fichier par Senior Manager, fusionnés
+  // ensemble (cf. computeMergedState).
+  let raw = { collab: null, rattachFiles: [], pointsFiles: [] };
 
   const els = {
     fileCollab: document.getElementById("file-collab"),
@@ -62,16 +74,9 @@
     loadedCollab: document.getElementById("loaded-collab"),
     loadedCollabName: document.getElementById("loaded-collab-name"),
     btnChangeCollab: document.getElementById("btn-change-collab"),
-    rattachChoice: document.getElementById("rattach-choice"),
-    loadedRattach: document.getElementById("loaded-rattach"),
-    loadedRattachName: document.getElementById("loaded-rattach-name"),
-    btnChangeRattach: document.getElementById("btn-change-rattach"),
-    btnSkipRattach: document.getElementById("btn-skip-rattach"),
-    pointsChoice: document.getElementById("points-choice"),
-    loadedPoints: document.getElementById("loaded-points"),
-    loadedPointsName: document.getElementById("loaded-points-name"),
-    btnChangePoints: document.getElementById("btn-change-points"),
-    btnSkipPoints: document.getElementById("btn-skip-points"),
+    loadedRattachList: document.getElementById("loaded-rattach-list"),
+    loadedPointsList: document.getElementById("loaded-points-list"),
+    consistencyReport: document.getElementById("consistency-report"),
     btnContinue: document.getElementById("btn-continue"),
     continueHint: document.getElementById("continue-hint"),
     btnBack: document.getElementById("btn-back"),
@@ -94,10 +99,6 @@
     tooltip: document.getElementById("tooltip"),
   };
 
-  // état de chaque étape optionnelle : "none" (pas encore traitée) | "loaded" | "skipped"
-  let rattachState = "none";
-  let pointsState = "none";
-
   function wireDropzone(zoneEl, inputEl, onFile) {
     inputEl.addEventListener("change", (e) => {
       if (e.target.files[0]) onFile(e.target.files[0]);
@@ -117,6 +118,30 @@
     zoneEl.addEventListener("drop", (e) => {
       const f = e.dataTransfer.files[0];
       if (f) onFile(f);
+    });
+  }
+
+  // Variante multi-fichiers (rattachements/réunions : un fichier par Senior Manager,
+  // on peut en déposer plusieurs à la fois ou successivement).
+  function wireDropzoneMulti(zoneEl, inputEl, onFiles) {
+    inputEl.addEventListener("change", (e) => {
+      if (e.target.files.length) onFiles([...e.target.files]);
+      inputEl.value = ""; // permet de resélectionner le même fichier après un retrait
+    });
+    ["dragover", "dragenter"].forEach((evt) =>
+      zoneEl.addEventListener(evt, (e) => {
+        e.preventDefault();
+        zoneEl.classList.add("dragover");
+      })
+    );
+    ["dragleave", "drop"].forEach((evt) =>
+      zoneEl.addEventListener(evt, (e) => {
+        e.preventDefault();
+        zoneEl.classList.remove("dragover");
+      })
+    );
+    zoneEl.addEventListener("drop", (e) => {
+      if (e.dataTransfer.files.length) onFiles([...e.dataTransfer.files]);
     });
   }
 
@@ -156,22 +181,39 @@
     els.loadedCollab.style.display = "flex";
     els.loadedCollabName.textContent = `${label} (${raw.collab.length} ligne(s))`;
     updateContinueState();
+    updateConsistencyPreview();
   }
-  function applyRattachRows(rows, label) {
-    raw.rattach = rows;
-    rattachState = "loaded";
-    els.rattachChoice.style.display = "none";
-    els.loadedRattach.style.display = "flex";
-    els.loadedRattachName.textContent = `${label} (${raw.rattach.length} ligne(s))`;
-    updateContinueState();
+
+  function renderLoadedFilesList(container, files, onRemove) {
+    container.innerHTML = files
+      .map(
+        (f, i) => `
+      <div class="loaded-row">
+        <span class="ok-icon">✓</span>
+        <span class="loaded-name">${f.name} (${f.rows.length} ligne(s))</span>
+        <button class="btn btn-secondary btn-small" data-idx="${i}">Retirer</button>
+      </div>`
+      )
+      .join("");
+    container.querySelectorAll("button").forEach((btn) => {
+      btn.addEventListener("click", () => onRemove(Number(btn.dataset.idx)));
+    });
   }
-  function applyPointRows(rows, label) {
-    raw.points = rows;
-    pointsState = "loaded";
-    els.pointsChoice.style.display = "none";
-    els.loadedPoints.style.display = "flex";
-    els.loadedPointsName.textContent = `${label} (${raw.points.length} ligne(s))`;
-    updateContinueState();
+  function renderRattachList() {
+    renderLoadedFilesList(els.loadedRattachList, raw.rattachFiles, (idx) => {
+      raw.rattachFiles.splice(idx, 1);
+      CartoState.save("rattachFiles", raw.rattachFiles);
+      renderRattachList();
+      updateConsistencyPreview();
+    });
+  }
+  function renderPointsList() {
+    renderLoadedFilesList(els.loadedPointsList, raw.pointsFiles, (idx) => {
+      raw.pointsFiles.splice(idx, 1);
+      CartoState.save("pointsFiles", raw.pointsFiles);
+      renderPointsList();
+      updateConsistencyPreview();
+    });
   }
 
   wireDropzone(els.dzCollab, els.fileCollab, async (file) => {
@@ -193,74 +235,48 @@
     els.dzCollab.style.display = "block";
     els.loadedCollab.style.display = "none";
     updateContinueState();
+    updateConsistencyPreview();
   });
 
-  wireDropzone(els.dzRattach, els.fileRattach, async (file) => {
-    try {
-      const wb = await readWorkbook(file);
-      const rows = sheetToRows(wb, "Rattachements");
-      CartoState.save("rattach", rows);
-      applyRattachRows(rows, file.name);
-    } catch (err) {
-      alert("Impossible de lire ce fichier : " + err.message);
+  wireDropzoneMulti(els.dzRattach, els.fileRattach, async (files) => {
+    for (const file of files) {
+      try {
+        const wb = await readWorkbook(file);
+        const rows = sheetToRows(wb, "Rattachements");
+        raw.rattachFiles.push({ name: file.name, rows });
+      } catch (err) {
+        alert(`Impossible de lire "${file.name}" : ${err.message}`);
+      }
     }
-  });
-  els.btnSkipRattach.addEventListener("click", () => {
-    raw.rattach = null;
-    rattachState = "skipped";
-    CartoState.clear("rattach");
-    els.rattachChoice.style.display = "none";
-    els.loadedRattach.style.display = "flex";
-    els.loadedRattachName.textContent = "Ignoré";
-    updateContinueState();
-  });
-  els.btnChangeRattach.addEventListener("click", () => {
-    raw.rattach = null;
-    rattachState = "none";
-    CartoState.clear("rattach");
-    els.fileRattach.value = "";
-    els.rattachChoice.style.display = "block";
-    els.loadedRattach.style.display = "none";
-    updateContinueState();
+    CartoState.save("rattachFiles", raw.rattachFiles);
+    renderRattachList();
+    updateConsistencyPreview();
   });
 
-  wireDropzone(els.dzPoints, els.filePoints, async (file) => {
-    try {
-      const wb = await readWorkbook(file);
-      const rows = sheetToRows(wb, "Réunions");
-      CartoState.save("points", rows);
-      applyPointRows(rows, file.name);
-    } catch (err) {
-      alert("Impossible de lire ce fichier : " + err.message);
+  wireDropzoneMulti(els.dzPoints, els.filePoints, async (files) => {
+    for (const file of files) {
+      try {
+        const wb = await readWorkbook(file);
+        const rows = sheetToRows(wb, "Réunions");
+        raw.pointsFiles.push({ name: file.name, rows });
+      } catch (err) {
+        alert(`Impossible de lire "${file.name}" : ${err.message}`);
+      }
     }
-  });
-  els.btnSkipPoints.addEventListener("click", () => {
-    raw.points = null;
-    pointsState = "skipped";
-    CartoState.clear("points");
-    els.pointsChoice.style.display = "none";
-    els.loadedPoints.style.display = "flex";
-    els.loadedPointsName.textContent = "Ignoré";
-    updateContinueState();
-  });
-  els.btnChangePoints.addEventListener("click", () => {
-    raw.points = null;
-    pointsState = "none";
-    CartoState.clear("points");
-    els.filePoints.value = "";
-    els.pointsChoice.style.display = "block";
-    els.loadedPoints.style.display = "none";
-    updateContinueState();
+    CartoState.save("pointsFiles", raw.pointsFiles);
+    renderPointsList();
+    updateConsistencyPreview();
   });
 
   // Restauration depuis la session (changement d'onglet sans réupload).
   (function hydrateFromSession() {
     const savedCollab = CartoState.load("collab");
     if (savedCollab && savedCollab.length) applyCollabRows(savedCollab, "Session précédente");
-    const savedRattach = CartoState.load("rattach");
-    if (savedRattach && savedRattach.length) applyRattachRows(savedRattach, "Session précédente");
-    const savedPoints = CartoState.load("points");
-    if (savedPoints && savedPoints.length) applyPointRows(savedPoints, "Session précédente");
+    raw.rattachFiles = CartoState.load("rattachFiles") || [];
+    raw.pointsFiles = CartoState.load("pointsFiles") || [];
+    renderRattachList();
+    renderPointsList();
+    updateConsistencyPreview();
   })();
 
   els.btnContinue.addEventListener("click", () => {
@@ -329,23 +345,155 @@
     if (sms.some((c) => c.id === prevSm)) els.filterSmViz.value = prevSm;
   }
 
-  function mergeAndRebuild() {
-    if (!raw.collab) return;
-
-    const rattachById = {};
-    (raw.rattach || []).forEach((r) => {
-      const id = norm(r.id);
-      if (!id) return;
-      rattachById[id] = {
-        manager_id: norm(r.manager_id),
-        chef_de_projet_id: norm(r.chef_de_projet_id),
-        compte_reference: norm(r.compte_reference),
-        tags: TAG_DEFS.filter((t) => isOui(r[t.key])).map((t) => t.label),
-        date_maj: norm(r.date_maj),
-      };
+  // --- Fusion multi-fichiers (un rattachements.xlsx / reunions.xlsx par Senior Manager) ---
+  //
+  // rattachements.xlsx téléchargé contient TOUJOURS tout le monde (le filtre SM n'affecte
+  // que l'affichage, pas le téléchargement) : la plupart des lignes d'un fichier donné sont
+  // donc vides en dehors du périmètre de son auteur. On fusionne champ par champ plutôt que
+  // ligne par ligne : un champ resté vide dans un fichier ne doit jamais écraser une valeur
+  // réelle apportée par un autre. Les tags (booléens) sont fusionnés en "OR" (vrai si un
+  // seul fichier dit "Oui") pour la même raison — un "Non" par défaut ne doit jamais
+  // effacer un "Oui" saisi ailleurs. Un vrai conflit (2 fichiers, 2 valeurs non vides
+  // différentes) est remonté dans le rapport de cohérence plutôt que tranché au hasard.
+  function mergeRattachFiles(files, collabIds, nameOf) {
+    const byId = {};
+    const errors = [];
+    files.forEach((file) => {
+      file.rows.forEach((row) => {
+        const id = norm(row.id);
+        if (!id) return;
+        if (collabIds && !collabIds.has(id)) {
+          errors.push(
+            `« ${file.name} » contient un rattachement pour l'id "${id}", introuvable dans collaborateurs.xlsx. Cette ligne est ignorée — vérifie que la personne n'a pas été supprimée ou que l'id n'est pas mal saisi.`
+          );
+          return;
+        }
+        if (!byId[id]) {
+          byId[id] = {
+            fields: {},
+            tags: { tag_haut_potentiel: false, tag_en_fragilite: false, tag_consultant_isole: false },
+            date_maj: "",
+          };
+        }
+        const entry = byId[id];
+        RATTACH_TEXT_FIELDS.forEach(({ key, label }) => {
+          const val = norm(row[key]);
+          if (!val) return;
+          if (!entry.fields[key]) entry.fields[key] = { value: val, files: [file.name] };
+          else if (entry.fields[key].value === val) entry.fields[key].files.push(file.name);
+          else {
+            errors.push(
+              `Conflit sur ${nameOf(id)} (${id}) — champ "${label}" : "${entry.fields[key].value}" (${entry.fields[key].files.join(", ")}) vs "${val}" (${file.name}). Choisis la bonne valeur et recharge le fichier corrigé.`
+            );
+          }
+        });
+        TAG_DEFS.forEach((t) => {
+          if (isOui(row[t.key])) entry.tags[t.key] = true;
+        });
+        if (norm(row.date_maj)) entry.date_maj = norm(row.date_maj);
+      });
     });
 
-    const collaborateurs = raw.collab
+    const rattachById = {};
+    Object.entries(byId).forEach(([id, entry]) => {
+      rattachById[id] = {
+        manager_id: entry.fields.manager_id ? entry.fields.manager_id.value : "",
+        chef_de_projet_id: entry.fields.chef_de_projet_id ? entry.fields.chef_de_projet_id.value : "",
+        compte_reference: entry.fields.compte_reference ? entry.fields.compte_reference.value : "",
+        tags: TAG_DEFS.filter((t) => entry.tags[t.key]).map((t) => t.label),
+        date_maj: entry.date_maj,
+      };
+    });
+    return { rattachById, errors };
+  }
+
+  function parsePointRow(row) {
+    return {
+      nom: norm(row.nom),
+      animateur_id: norm(row.animateur_id),
+      participants: new Set(
+        norm(row.participants_ids).split(",").map((s) => s.trim()).filter(Boolean)
+      ),
+      type: norm(row.type) || "Individuel",
+      periodicite: norm(row.periodicite) || "Non précisée",
+      ordre_du_jour: norm(row.ordre_du_jour),
+      date_maj: norm(row.date_maj),
+    };
+  }
+  function samePointContent(a, b) {
+    if (a.animateur_id !== b.animateur_id) return false;
+    if (a.participants.size !== b.participants.size) return false;
+    for (const p of a.participants) if (!b.participants.has(p)) return false;
+    return true;
+  }
+
+  function mergePointsFiles(files, collabIds, nameOf) {
+    const byId = {};
+    const allPoints = []; // pour la détection de doublons cross-fichiers
+    const errors = [];
+    const warnings = [];
+
+    files.forEach((file) => {
+      file.rows.forEach((row) => {
+        const id = norm(row.id);
+        if (!id) return;
+        const point = { id, ...parsePointRow(row) };
+        if (byId[id]) {
+          if (!samePointContent(byId[id].point, point)) {
+            errors.push(
+              `« ${file.name} » et « ${byId[id].file} » contiennent tous les deux une réunion "${id}" (${point.nom || byId[id].point.nom || "sans nom"}) mais avec un contenu différent (animateur ou participants). Renomme l'id dans l'un des deux fichiers avant de le recharger.`
+            );
+          }
+          return; // on garde la 1ère version rencontrée
+        }
+        byId[id] = { point, file: file.name };
+        allPoints.push({ point, file: file.name });
+      });
+    });
+
+    if (collabIds) {
+      allPoints.forEach(({ point, file }) => {
+        const unknown = [point.animateur_id, ...point.participants].filter((pid) => pid && !collabIds.has(pid));
+        [...new Set(unknown)].forEach((pid) => {
+          errors.push(
+            `La réunion "${point.nom || point.id}" (${file}) référence l'id "${pid}", introuvable dans collaborateurs.xlsx. Cette personne ne sera pas affichée.`
+          );
+        });
+      });
+    }
+
+    // Doublon probable : même animateur + mêmes participants, dans 2 fichiers différents.
+    for (let i = 0; i < allPoints.length; i++) {
+      for (let j = i + 1; j < allPoints.length; j++) {
+        const a = allPoints[i];
+        const b = allPoints[j];
+        if (a.file === b.file) continue;
+        if (samePointContent(a.point, b.point)) {
+          warnings.push(
+            `Ces 2 réunions semblent être la même : "${a.point.nom || a.point.id}" (${a.file}) et "${b.point.nom || b.point.id}" (${b.file}) — même animateur et mêmes participants. Si c'est un doublon, supprime l'une des deux dans son fichier d'origine.`
+          );
+        }
+      }
+    }
+
+    const points = Object.values(byId).map(({ point }) => ({ ...point, participants: [...point.participants] }));
+    return { points, errors, warnings };
+  }
+
+  function computeMergedState() {
+    const idToName = {};
+    (raw.collab || [])
+      .filter((r) => norm(r.id))
+      .forEach((r) => {
+        idToName[norm(r.id)] = collabName({ id: norm(r.id), nom: norm(r.nom), prenom: norm(r.prenom) });
+      });
+    const collabIds = raw.collab ? new Set(Object.keys(idToName)) : null;
+    const nameOf = (id) => idToName[id] || id;
+
+    const { rattachById, errors: rattachErrors } = mergeRattachFiles(raw.rattachFiles, collabIds, nameOf);
+    const { points, errors: pointErrors, warnings } = mergePointsFiles(raw.pointsFiles, collabIds, nameOf);
+
+    const collaborateurs = (raw.collab || [])
       .filter((r) => norm(r.id))
       .map((r) => {
         const id = norm(r.id);
@@ -366,23 +514,37 @@
         };
       });
 
-    const points = (raw.points || [])
-      .filter((r) => norm(r.id))
-      .map((r) => ({
-        id: norm(r.id),
-        nom: norm(r.nom),
-        animateur_id: norm(r.animateur_id),
-        participants: norm(r.participants_ids)
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
-        type: norm(r.type) || "Individuel",
-        periodicite: norm(r.periodicite) || "Non précisée",
-        ordre_du_jour: norm(r.ordre_du_jour),
-        date_maj: norm(r.date_maj),
-      }));
+    return { collaborateurs, points, report: { errors: rattachErrors.concat(pointErrors), warnings } };
+  }
 
-    state = { collaborateurs, points };
+  function renderConsistencyReport(report) {
+    const { errors, warnings } = report;
+    if (!errors.length && !warnings.length) {
+      els.consistencyReport.style.display = "none";
+      els.consistencyReport.innerHTML = "";
+      return;
+    }
+    els.consistencyReport.style.display = "block";
+    els.consistencyReport.innerHTML =
+      (errors.length
+        ? `<h3 class="errors">🔴 Erreurs (${errors.length})</h3><ul>${errors.map((m) => `<li>${m}</li>`).join("")}</ul>`
+        : "") +
+      (warnings.length
+        ? `<h3 class="warnings">🟠 Avertissements (${warnings.length})</h3><ul>${warnings.map((m) => `<li>${m}</li>`).join("")}</ul>`
+        : "");
+  }
+
+  // Recalcule le rapport dès qu'un fichier est ajouté/retiré, avant même de cliquer sur
+  // "Continuer" : plus tôt l'utilisateur voit une incohérence, plus vite il la corrige.
+  function updateConsistencyPreview() {
+    renderConsistencyReport(computeMergedState().report);
+  }
+
+  function mergeAndRebuild() {
+    if (!raw.collab) return;
+    const merged = computeMergedState();
+    state = { collaborateurs: merged.collaborateurs, points: merged.points };
+    renderConsistencyReport(merged.report);
     els.search.disabled = false;
     populateVizFilters();
     rebuildGraph();
