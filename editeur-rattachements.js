@@ -15,7 +15,7 @@
 
   let collaborateurs = []; // {id, nom, prenom, poste, senior_manager_id}
   let collabPrevById = {}; // id -> senior_manager_id, photo du collaborateurs.xlsx précédent
-  let rattach = {}; // id -> {manager_id, chef_de_projet_id, compte_reference, tag_*, actif}
+  let rattach = {}; // id -> {manager_id, chef_de_projet_id, compte_reference, tag_*}
   let rattachLoaded = false;
   // Photo figée de rattachements.xlsx au moment du chargement (jamais modifiée ensuite) :
   // sert à repérer les collaborateurs jamais encore traités (nouveaux) et à trier la table.
@@ -154,7 +154,6 @@
         tag_haut_potentiel: isOui(r.tag_haut_potentiel),
         tag_en_fragilite: isOui(r.tag_en_fragilite),
         tag_consultant_isole: isOui(r.tag_consultant_isole),
-        actif: !norm(r.actif) || isOui(r.actif),
       };
     });
     rattachSnapshot = JSON.parse(JSON.stringify(rattach));
@@ -238,7 +237,6 @@
         tag_haut_potentiel: false,
         tag_en_fragilite: false,
         tag_consultant_isole: false,
-        actif: true,
       };
     }
     return rattach[id];
@@ -369,7 +367,6 @@
           <label class="checkbox-row"><input type="checkbox" data-id="${c.id}" data-field="tag_en_fragilite" ${r.tag_en_fragilite ? "checked" : ""} ${otherTagsDisabled ? "disabled" : ""}> En fragilité</label>
           <label class="checkbox-row"><input type="checkbox" data-id="${c.id}" data-field="tag_consultant_isole" ${r.tag_consultant_isole ? "checked" : ""} ${otherTagsDisabled ? "disabled" : ""}> Consultant isolé</label>
         </td>
-        <td><label class="checkbox-row"><input type="checkbox" data-id="${c.id}" data-field="actif" ${r.actif ? "checked" : ""}></label></td>
       `;
       tr.querySelector('[data-field="manager_id"]').value = r.manager_id;
       tr.querySelector('[data-field="chef_de_projet_id"]').value = r.chef_de_projet_id;
@@ -394,7 +391,7 @@
     const today = todayISO();
     const rows = [
       ["id", "manager_id", "chef_de_projet_id", "compte_reference",
-        "tag_haut_potentiel", "tag_en_fragilite", "tag_consultant_isole", "actif", "date_maj"],
+        "tag_haut_potentiel", "tag_en_fragilite", "tag_consultant_isole", "date_maj"],
     ];
     collaborateurs.forEach((c) => {
       const r = getRattach(c.id);
@@ -403,7 +400,6 @@
         r.tag_haut_potentiel ? "Oui" : "Non",
         r.tag_en_fragilite ? "Oui" : "Non",
         r.tag_consultant_isole ? "Oui" : "Non",
-        r.actif ? "Oui" : "Non",
         today,
       ]);
     });

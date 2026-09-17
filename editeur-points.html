@@ -140,7 +140,6 @@
           <label>Ordre du jour</label>
           <textarea id="f-odj" placeholder="Ex : avancement missions, alertes... (facultatif)"></textarea>
         </div>
-        <label class="checkbox-row"><input type="checkbox" id="f-actif" checked> Réunion active</label>
         <div class="step-actions">
           <button class="btn btn-secondary" id="btn-cancel-edit" style="display:none">Annuler la modification</button>
           <button class="btn btn-primary" id="btn-add">Ajouter la réunion</button>
@@ -150,7 +149,7 @@
       <div class="panel" id="uncovered-panel">
         <h2 style="margin-bottom:6px">Collaborateurs sans réunion (<span id="count-uncovered">0</span>)</h2>
         <div class="muted-note" style="margin-bottom:10px">
-          Personne ne les retrouve pour l'instant dans une réunion (individuelle ou d'équipe) active.
+          Personne ne les retrouve pour l'instant dans une réunion (individuelle ou d'équipe).
           Clique sur un nom pour préremplir une réunion individuelle avec lui.
         </div>
         <div id="uncovered-list" class="chip-list"></div>
@@ -163,7 +162,7 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>Nom</th><th>Type</th><th>Périodicité</th><th>Animateur</th><th>Participants</th><th>Active</th><th></th>
+              <th>Nom</th><th>Type</th><th>Périodicité</th><th>Animateur</th><th>Participants</th><th></th>
             </tr>
           </thead>
           <tbody id="table-body"></tbody>

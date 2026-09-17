@@ -61,7 +61,6 @@
     stepUpload: document.getElementById("step-upload"),
     stepViz: document.getElementById("step-viz"),
     search: document.getElementById("search"),
-    toggleInactive: document.getElementById("toggle-inactive"),
     toggleRattachements: document.getElementById("toggle-rattachements"),
     togglePoints: document.getElementById("toggle-points"),
     filterCompte: document.getElementById("filter-compte"),
@@ -252,7 +251,6 @@
     els.stepUpload.style.display = "block";
   });
 
-  els.toggleInactive.addEventListener("change", rebuildGraph);
   els.toggleRattachements.addEventListener("change", rebuildGraph);
   els.togglePoints.addEventListener("change", rebuildGraph);
   els.filterCompte.addEventListener("change", rebuildGraph);
@@ -293,7 +291,6 @@
         chef_de_projet_id: norm(r.chef_de_projet_id),
         compte_reference: norm(r.compte_reference),
         tags: TAG_DEFS.filter((t) => isOui(r[t.key])).map((t) => t.label),
-        actif: !norm(r.actif) || isOui(r.actif),
         date_maj: norm(r.date_maj),
       };
     });
@@ -307,7 +304,6 @@
           chef_de_projet_id: "",
           compte_reference: "",
           tags: [],
-          actif: true,
           date_maj: "",
         };
         return {
@@ -333,7 +329,6 @@
         type: norm(r.type) || "Autre",
         periodicite: norm(r.periodicite) || "Non précisée",
         ordre_du_jour: norm(r.ordre_du_jour),
-        actif: !norm(r.actif) || isOui(r.actif),
         date_maj: norm(r.date_maj),
       }));
 
@@ -358,11 +353,11 @@
     return state.collaborateurs.filter((c) => c[field] === id).map(collabName);
   }
 
-  // Tous les points (actifs) auxquels une personne participe, comme animateur ou participant.
+  // Tous les points auxquels une personne participe, comme animateur ou participant.
   function pointIdsInvolving(id) {
     const s = new Set();
     state.points
-      .filter((p) => p.actif && (p.animateur_id === id || p.participants.includes(id)))
+      .filter((p) => p.animateur_id === id || p.participants.includes(id))
       .forEach((p) => s.add(p.id));
     return s;
   }
@@ -397,7 +392,6 @@
   }
 
   function rebuildGraph() {
-    const showInactive = els.toggleInactive.checked;
     const showRattachements = els.toggleRattachements.checked;
     const showPoints = els.togglePoints.checked;
     const filterCompte = els.filterCompte.value;
@@ -410,9 +404,9 @@
       return true;
     };
 
-    const activeCollabs = state.collaborateurs.filter((c) => showInactive || c.actif);
+    const activeCollabs = state.collaborateurs;
     const activeById = new Map(activeCollabs.map((c) => [c.id, c]));
-    const activePoints = showPoints ? state.points.filter((p) => showInactive || p.actif) : [];
+    const activePoints = showPoints ? state.points : [];
 
     els.emptyState.style.display = state.collaborateurs.length === 0 ? "flex" : "none";
 
@@ -447,13 +441,13 @@
       const role = roleOf(c.poste);
       const size = role === "SM" ? 22 : role ? 16 : 12;
       const roleColor = cssVar(roleColorVar(role));
-      const mutedColor = cssVar("--node-person-inactive");
-      const displayColor = isContextual || !c.actif ? mutedColor : roleColor;
+      const mutedColor = cssVar("--node-person-muted");
+      const displayColor = isContextual ? mutedColor : roleColor;
       const isFragile = !isContextual && c.tags.includes("En fragilité");
-      const gap = c.actif && !isSeenByResponsable(c);
+      const gap = !isSeenByResponsable(c);
       nodes.push({
         id: "c:" + c.id,
-        label: collabName(c) + (role && role !== "SM" ? ` (${c.poste})` : role === "SM" ? " (SM)" : "") + (gap ? " ⚠" : ""),
+        label: collabName(c) + (role && role !== "SM" ? ` (${c.poste})` : role === "SM" ? " (SM)" : "") + (gap ? " *⚠*" : ""),
         shape: "dot",
         size,
         color: {
@@ -461,7 +455,12 @@
           border: isFragile ? cssVar("--ring-fragile") : displayColor,
           highlight: { background: roleColor, border: isFragile ? cssVar("--ring-fragile") : cssVar("--text-primary") },
         },
-        font: { color: isContextual ? cssVar("--text-muted") : cssVar("--text-primary"), size: 13 },
+        font: {
+          color: isContextual ? cssVar("--text-muted") : cssVar("--text-primary"),
+          size: 13,
+          multi: "md",
+          bold: { color: cssVar("--gap-warning"), size: 18, mod: "bold" },
+        },
         borderWidth: isFragile ? 3 : 1,
         opacity: isContextual ? 0.55 : 1,
         _kind: "collab",
@@ -821,10 +820,9 @@
   }
 
   function updateStats(collabs, points) {
-    const nbActive = collabs.filter((c) => c.actif).length;
-    const nbGap = collabs.filter((c) => c.actif && !isSeenByResponsable(c)).length;
+    const nbGap = collabs.filter((c) => !isSeenByResponsable(c)).length;
     els.stats.textContent =
-      `${nbActive} collaborateur(s) actif(s) · ${points.filter((p) => p.actif).length} réunion(s) active(s)` +
+      `${collabs.length} collaborateur(s) · ${points.length} réunion(s)` +
       (nbGap ? ` · ⚠ ${nbGap} sans réunion commune avec un responsable` : "");
   }
 
@@ -846,7 +844,7 @@
     const parts = participantsOf(p);
     return `
       <div class="tt-title">${p.nom || "Réunion sans nom"}</div>
-      <div class="tt-sub">${p.type} · ${p.periodicite}${p.actif ? "" : " · inactif"}</div>
+      <div class="tt-sub">${p.type} · ${p.periodicite}</div>
       ${animLabel ? `<div class="tt-row"><span class="tt-label">Animateur :</span> ${animLabel}</div>` : ""}
       ${parts.length ? `<div class="tt-row"><span class="tt-label">Participants :</span><ul class="tt-list">${parts.map((c) => `<li>${collabName(c)}</li>`).join("")}</ul></div>` : ""}
       ${p.ordre_du_jour ? `<div class="tt-row" style="margin-top:8px"><span class="tt-label">Ordre du jour :</span> ${p.ordre_du_jour}</div>` : ""}
@@ -870,7 +868,7 @@
     const cpOf = encadresPar(c.id, "chef_de_projet_id");
     showTooltip(`
       <div class="tt-title">${collabName(c)}</div>
-      <div class="tt-sub">${c.poste || "Poste non précisé"}${c.actif ? "" : " · inactif"}</div>
+      <div class="tt-sub">${c.poste || "Poste non précisé"}</div>
       ${node._contextual ? `<div class="tt-row" style="color:var(--text-muted)">Hors du filtre actuel — affiché car présent dans une réunion filtrée</div>` : ""}
       <div class="tt-row"><span class="tt-label">Senior Manager :</span> ${sm ? collabName(sm) : c.senior_manager_id || "— (SM de tête)"}</div>
       ${mgr ? `<div class="tt-row"><span class="tt-label">Manager :</span> ${collabName(mgr)}</div>` : c.manager_id ? `<div class="tt-row"><span class="tt-label">Manager :</span> ${c.manager_id}</div>` : ""}
@@ -881,7 +879,7 @@
       ${mgrOf.length ? `<div class="tt-row"><span class="tt-label">Manager de :</span> ${mgrOf.join(", ")}</div>` : ""}
       ${cpOf.length ? `<div class="tt-row"><span class="tt-label">CP de :</span> ${cpOf.join(", ")}</div>` : ""}
       ${pts.length ? `<div class="tt-row" style="margin-top:8px"><span class="tt-label">Réunions :</span><ul class="tt-list">${pts.map((x) => `<li>${x.point.nom || "Réunion individuelle"} — ${x.role} (${x.point.periodicite})</li>`).join("")}</ul></div>` : ""}
-      ${c.actif && !isSeenByResponsable(c) ? `<div class="tt-row" style="margin-top:8px;color:var(--ring-fragile)">⚠ Aucune réunion commune avec un responsable (SM/Manager/CP)</div>` : ""}
+      ${!isSeenByResponsable(c) ? `<div class="tt-row" style="margin-top:8px;color:var(--gap-warning)">⚠ Aucune réunion commune avec un responsable (SM/Manager/CP)</div>` : ""}
     `);
     positionTooltipAtMouse();
   }

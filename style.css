@@ -22,10 +22,10 @@
   --node-person-sm:      var(--slot-violet);
   --node-person-manager: var(--slot-aqua);
   --node-person-cp:      var(--slot-magenta);
-  --node-person-inactive: #b7c6dd;
+  --node-person-muted:   #b7c6dd;
   --node-point:   var(--slot-orange);
-  --node-point-inactive: #f0c1a8;
-  --ring-fragile: var(--status-critical);
+  --ring-fragile: #7dd3fc;
+  --gap-warning: var(--status-critical);
   --edge-hierarchy: #9a9890;
   --edge-anim: var(--slot-orange);
   --edge-particip: #c8ac97;
@@ -56,10 +56,10 @@
     --node-person-sm:      var(--slot-violet);
     --node-person-manager: var(--slot-aqua);
     --node-person-cp:      var(--slot-magenta);
-    --node-person-inactive: #3a4658;
+    --node-person-muted:   #3a4658;
     --node-point:   var(--slot-orange);
-    --node-point-inactive: #5a3d2c;
-    --ring-fragile: var(--status-critical);
+    --ring-fragile: #7dd3fc;
+    --gap-warning: var(--status-critical);
     --edge-hierarchy: #5c5b56;
     --edge-anim: var(--slot-orange);
     --edge-particip: #6b584a;

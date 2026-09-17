@@ -15,7 +15,7 @@
   }
 
   let collaborateurs = []; // {id, nom, prenom, poste, senior_manager_id}
-  let points = []; // {id, nom, animateur_id, participants: Set<id>, type, periodicite, ordre_du_jour, actif}
+  let points = []; // {id, nom, animateur_id, participants: Set<id>, type, periodicite, ordre_du_jour}
   let editingId = null;
   let lastAnimateurId = ""; // repris par défaut pour la prochaine réunion ajoutée
   let lastPeriodicite = "Hebdomadaire"; // idem pour la périodicité
@@ -55,7 +55,6 @@
     fParticipants: document.getElementById("f-participants"),
     fNom: document.getElementById("f-nom"),
     fOdj: document.getElementById("f-odj"),
-    fActif: document.getElementById("f-actif"),
     btnAdd: document.getElementById("btn-add"),
     btnCancelEdit: document.getElementById("btn-cancel-edit"),
     btnDownload: document.getElementById("btn-download"),
@@ -172,7 +171,6 @@
         type: norm(r.type) || "Individuel",
         periodicite: norm(r.periodicite) || "Hebdomadaire",
         ordre_du_jour: norm(r.ordre_du_jour),
-        actif: !norm(r.actif) || isOui(r.actif),
       }));
     els.pointsChoice.style.display = "none";
     els.loadedPoints.style.display = "flex";
@@ -258,17 +256,15 @@
     return collaborateurs.filter(matchesPerimeter);
   }
 
-  // Aide à la saisie : qui n'apparaît encore dans aucune réunion active (ni comme
-  // animateur, ni comme participant) — pour repérer ce qu'il reste à couvrir.
-  // Respecte le filtre de périmètre courant, comme le reste du formulaire.
+  // Aide à la saisie : qui n'apparaît encore dans aucune réunion (ni comme animateur, ni
+  // comme participant) — pour repérer ce qu'il reste à couvrir. Respecte le filtre de
+  // périmètre courant, comme le reste du formulaire.
   function uncoveredCollaborateurs() {
     const covered = new Set();
-    points
-      .filter((p) => p.actif)
-      .forEach((p) => {
-        if (p.animateur_id) covered.add(p.animateur_id);
-        p.participants.forEach((id) => covered.add(id));
-      });
+    points.forEach((p) => {
+      if (p.animateur_id) covered.add(p.animateur_id);
+      p.participants.forEach((id) => covered.add(id));
+    });
     return visibleCollaborateurs()
       .filter((c) => !covered.has(c.id))
       .sort((a, b) => collabName(a).localeCompare(collabName(b)));
@@ -374,7 +370,6 @@
     els.fAnimateur.value = lastAnimateurId;
     els.fNom.value = "";
     els.fOdj.value = "";
-    els.fActif.checked = true;
     els.fParticipantsSearch.value = "";
     participantsSelection = new Set();
     renderParticipantsList();
@@ -390,7 +385,6 @@
     els.fPeriodicite.value = point.periodicite;
     els.fNom.value = point.nom;
     els.fOdj.value = point.ordre_du_jour;
-    els.fActif.checked = point.actif;
     els.fParticipantsSearch.value = "";
     if (point.type === "Individuel") {
       els.fChef.value = point.animateur_id;
@@ -432,7 +426,6 @@
       type,
       periodicite: els.fPeriodicite.value,
       ordre_du_jour: norm(els.fOdj.value),
-      actif: els.fActif.checked,
     };
     lastAnimateurId = animateur_id || lastAnimateurId;
     lastPeriodicite = data.periodicite || lastPeriodicite;
@@ -464,7 +457,6 @@
           <td>${p.periodicite}</td>
           <td>${animateurLabel(p.animateur_id)}</td>
           <td>${p.participants.size}</td>
-          <td>${p.actif ? "Oui" : "Non"}</td>
           <td>
             <button class="btn btn-secondary btn-small" data-action="edit" data-id="${p.id}">Modifier</button>
             <button class="btn btn-danger btn-small" data-action="delete" data-id="${p.id}">Supprimer</button>
@@ -489,12 +481,12 @@
   els.btnDownload.addEventListener("click", () => {
     const today = todayISO();
     const rows = [
-      ["id", "nom", "animateur_id", "participants_ids", "type", "periodicite", "ordre_du_jour", "actif", "date_maj"],
+      ["id", "nom", "animateur_id", "participants_ids", "type", "periodicite", "ordre_du_jour", "date_maj"],
     ];
     points.forEach((p) => {
       rows.push([
         p.id, p.nom, p.animateur_id, [...p.participants].join(","),
-        p.type, p.periodicite, p.ordre_du_jour, p.actif ? "Oui" : "Non", today,
+        p.type, p.periodicite, p.ordre_du_jour, today,
       ]);
     });
     const ws = XLSX.utils.aoa_to_sheet(rows);

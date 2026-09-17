@@ -111,28 +111,33 @@ avec des exemples — sauvegarde tes données avant si besoin.
     scripts/migrate_collab_column_order.py chemin/vers/collaborateurs.xlsx`.
 - **rattachements.xlsx** → onglet Rattachements : `id, manager_id,
   chef_de_projet_id, compte_reference, tag_haut_potentiel, tag_en_fragilite,
-  tag_consultant_isole, actif, date_maj`.
+  tag_consultant_isole, date_maj`.
   - `manager_id` / `chef_de_projet_id` : encadrement opérationnel, optionnel, peut
     pointer vers quelqu'un d'un autre périmètre SM.
 - **reunions.xlsx** → onglet Réunions : `id, nom, animateur_id, participants_ids
-  (ids séparés par une virgule), type, periodicite, ordre_du_jour, actif, date_maj`.
+  (ids séparés par une virgule), type, periodicite, ordre_du_jour, date_maj`.
+
+Il n'y a pas de notion d'actif/inactif : un départ ou l'arrêt d'une réunion se gère en
+supprimant la ligne correspondante plutôt qu'en la désactivant.
 
 ## Légende de la visualisation
 
 - Couleur du nœud = rôle : violet Senior Manager, vert Manager, magenta Chef de
   projet/Directeur de projet, bleu Consultant.
-- Anneau rouge toujours visible = tag "En fragilité". ⚠ toujours visible = aucune
-  réunion commune avec un responsable (SM/Manager/CP) — l'objectif final de l'outil.
-- Pastilles de tags : jaune = "Haut potentiel", magenta = "Consultant isolé".
+- Anneau bleu clair toujours visible = tag "En fragilité". Pastille jaune en haut à
+  droite du nœud, toujours visible = tag "Haut potentiel". ⚠ en gras toujours visible
+  = aucune réunion commune avec un responsable (SM/Manager/CP) — l'objectif final de
+  l'outil. Le tag "Consultant isolé" reste visible uniquement au survol (info-bulle).
 - **Liens d'encadrement (case à cocher "Afficher les rattachements", décochée par
   défaut)** : trait plein = Senior Manager (réel), pointillé = Manager, pointillé
   fin = Chef de projet. Masqués par défaut pour ne pas surcharger le graphe — à
   activer pour visualiser la ligne hiérarchique.
 - **Réunions (case à cocher "Afficher les réunions", cochée par défaut)** :
-  - Réunion d'équipe → chaque participant reçoit son propre halo en pointillés ; le
-    nom de la réunion s'affiche au-dessus. Être "dans la réunion" ne dépend que de la
-    proximité réelle à un participant invité — faire glisser un collaborateur externe
-    au milieu du groupe ne le fait jamais entrer dans la réunion, même visuellement.
+  - Réunion d'équipe → une seule forme organique lissée ("à main levée") entoure ses
+    membres ; le nom de la réunion s'affiche au-dessus. Cette forme est recalculée à
+    chaque frame à partir de la position réelle des membres — elle a un intérieur
+    plein, donc glisser volontairement un collaborateur externe au milieu du groupe
+    peut le faire apparaître visuellement dedans (sans conséquence sur les données).
   - Réunion individuelle → simple trait reliant l'animateur et le collaborateur (pas
     d'étiquette, pour éviter la répétition).
 - **Filtres Compte / SM** (menus déroulants en haut) : une réunion partiellement hors

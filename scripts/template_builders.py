@@ -35,15 +35,15 @@ COLLAB_WIDTHS = [8, 18, 18, 18, 16, 13, 11]
 
 RATTACH_HEADERS = [
     "id", "manager_id", "chef_de_projet_id", "compte_reference",
-    "tag_haut_potentiel", "tag_en_fragilite", "tag_consultant_isole", "actif", "date_maj",
+    "tag_haut_potentiel", "tag_en_fragilite", "tag_consultant_isole", "date_maj",
 ]
-RATTACH_WIDTHS = [8, 12, 18, 18, 18, 16, 20, 8, 12]
+RATTACH_WIDTHS = [8, 12, 18, 18, 18, 16, 20, 12]
 
 POINT_HEADERS = [
     "id", "nom", "animateur_id", "participants_ids", "type", "periodicite",
-    "ordre_du_jour", "actif", "date_maj",
+    "ordre_du_jour", "date_maj",
 ]
-POINT_WIDTHS = [8, 30, 14, 30, 14, 16, 45, 8, 12]
+POINT_WIDTHS = [8, 30, 14, 30, 14, 16, 45, 12]
 
 
 def _style_header(ws, headers, widths):
@@ -92,7 +92,7 @@ def build_collaborateurs_workbook(rows=None):
         ("  qui permet de filtrer les pages d'édition sur le périmètre d'un seul SM.", NORMAL_FONT),
         ("", NORMAL_FONT),
         ("Mise à jour itérative : ajoute une ligne pour un nouvel arrivant, ne réécris pas", NORMAL_FONT),
-        ("le fichier depuis zéro. Un départ se gère via 'actif=Non' dans rattachements.xlsx.", NORMAL_FONT),
+        ("le fichier depuis zéro. Un départ se gère en supprimant sa ligne.", NORMAL_FONT),
         ("", NORMAL_FONT),
         ("Étape suivante : ouvre editeur-rattachements.html, charge ce fichier, et associe", NORMAL_FONT),
         ("à chaque collaborateur son Manager/CP opérationnel, ses tags, etc. → rattachements.xlsx.", NORMAL_FONT),
@@ -204,7 +204,7 @@ def build_rattachements_workbook(rows=None):
 
     dv_oui_non = DataValidation(type="list", formula1='"Oui,Non"', allow_blank=True)
     ws.add_data_validation(dv_oui_non)
-    for name in ["tag_haut_potentiel", "tag_en_fragilite", "tag_consultant_isole", "actif"]:
+    for name in ["tag_haut_potentiel", "tag_en_fragilite", "tag_consultant_isole"]:
         col = _col(RATTACH_HEADERS, name)
         dv_oui_non.add(f"{col}2:{col}{last_row}")
 
@@ -227,7 +227,6 @@ def build_points_workbook(rows=None):
         ("  aux id du fichier collaborateurs.xlsx (colonne 'id').", NORMAL_FONT),
         ("- participants_ids : plusieurs id séparés par une virgule (ex: C003,C004,C007).", NORMAL_FONT),
         ("  N'y remets pas l'animateur, il est déjà relié via animateur_id.", NORMAL_FONT),
-        ("- Pour arrêter une réunion sans perdre l'historique, passe 'actif' à Non.", NORMAL_FONT),
         ("", NORMAL_FONT),
         ("Charge ensuite ce fichier avec collaborateurs.xlsx et rattachements.xlsx dans index.html.", NORMAL_FONT),
     ])
@@ -261,9 +260,5 @@ def build_points_workbook(rows=None):
     )
     ws.add_data_validation(dv_periodicite)
     dv_periodicite.add(f"{_col(POINT_HEADERS,'periodicite')}2:{_col(POINT_HEADERS,'periodicite')}{last_row}")
-
-    dv_actif = DataValidation(type="list", formula1='"Oui,Non"', allow_blank=True)
-    ws.add_data_validation(dv_actif)
-    dv_actif.add(f"{_col(POINT_HEADERS,'actif')}2:{_col(POINT_HEADERS,'actif')}{last_row}")
 
     return wb

@@ -98,9 +98,6 @@
       <button class="btn btn-secondary btn-small" id="btn-back">← Modifier les fichiers</button>
       <input type="text" id="search" placeholder="Rechercher un collaborateur ou une réunion..." disabled>
       <label class="toggle">
-        <input type="checkbox" id="toggle-inactive"> Afficher les inactifs
-      </label>
-      <label class="toggle">
         <input type="checkbox" id="toggle-rattachements"> Afficher les rattachements
       </label>
       <label class="toggle">
@@ -129,7 +126,7 @@
         <h2>Alerte (toujours visible)</h2>
         <div class="legend-row"><span class="legend-swatch" style="background:var(--node-person); border:3px solid var(--ring-fragile)"></span> En fragilité</div>
         <div class="legend-row"><span class="legend-swatch" style="background:var(--status-warning)"></span> Haut potentiel (pastille en haut à droite du nœud)</div>
-        <div class="legend-row">⚠ = aucune réunion commune avec un responsable (SM/Manager/CP)</div>
+        <div class="legend-row"><span style="color:var(--gap-warning); font-weight:bold">⚠</span> = aucune réunion commune avec un responsable (SM/Manager/CP)</div>
         <h2>Liens d'encadrement (case à cocher)</h2>
         <div class="legend-row"><span class="legend-line" style="border-color:var(--edge-hierarchy)"></span> Senior Manager (réel)</div>
         <div class="legend-row"><span class="legend-line dashed" style="border-color:var(--edge-hierarchy)"></span> Manager</div>
@@ -138,7 +135,7 @@
         <div class="legend-row"><span class="legend-circle" style="color:var(--edge-anim);border-color:var(--edge-anim)"></span> Réunion d'équipe (dans la forme = dans la réunion)</div>
         <div class="legend-row"><span class="legend-line" style="border-color:var(--edge-anim)"></span> Réunion individuelle (entre les 2 personnes reliées)</div>
         <h2>Filtres (Compte / SM)</h2>
-        <div class="legend-row"><span class="legend-swatch" style="background:var(--node-person-inactive)"></span> Hors filtre, affiché car présent dans une réunion filtrée</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:var(--node-person-muted)"></span> Hors filtre, affiché car présent dans une réunion filtrée</div>
         <h2>Tags (au survol)</h2>
         <div class="legend-row"><span class="pill" style="background:var(--slot-magenta)">Consultant isolé</span></div>
         <h2>Astuce</h2>

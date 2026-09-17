@@ -74,7 +74,6 @@ for r in old_collab:
         tag_haut_potentiel=tag_hp,
         tag_en_fragilite=tag_fr,
         tag_consultant_isole=tag_is,
-        actif=r.get("actif") or "Oui",
         date_maj=r.get("date_maj") or "",
     ))
 
@@ -92,7 +91,6 @@ for p in old_points:
         type=p.get("type") or "",
         periodicite=p.get("periodicite") or "",
         ordre_du_jour=p.get("ordre_du_jour") or "",
-        actif=p.get("actif") or "Oui",
         date_maj=p.get("date_maj") or "",
     ))
 
