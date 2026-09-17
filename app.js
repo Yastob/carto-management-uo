@@ -630,44 +630,103 @@
     updateStats(scopedCollabs, relevantPoints);
   }
 
-  // Un cercle englobant (ou même une enveloppe convexe) inclut TOUT son intérieur
-  // géométrique, y compris des zones vides où personne n'est réellement invité — donc
-  // si on glisse un nœud étranger au milieu du groupe, il se retrouve "dedans" à tort.
-  // Pour éviter ça par construction, on ne considère jamais un intérieur : chaque membre
-  // porte son propre halo (rayon MEMBER_R), et la forme dessinée est l'UNION de ces halos
-  // (un seul Path2D contenant tous les cercles, rempli en une fois — canvas fusionne
-  // naturellement les cercles qui se chevauchent). Un point ne compte "dans la réunion"
-  // que s'il est physiquement proche d'AU MOINS UN vrai membre, jamais par simple
-  // appartenance à une zone englobante.
-  const MEMBER_R = 42;
-  const RING_W = 3; // épaisseur du contour du blob fusionné (4 quand la réunion est active)
+  // Contour "à main levée" : enveloppe convexe des membres, gonflée d'un padding puis
+  // lissée (courbes passant par les milieux de chaque côté). Dessiné comme une seule
+  // forme organique, pas un cercle par personne. Limite connue et acceptée : une forme
+  // pleine a un intérieur, donc glisser quelqu'un d'extérieur au milieu du groupe peut
+  // le faire apparaître visuellement "dedans" — il n'est jamais compté comme participant
+  // dans les données, seul l'affichage peut être trompeur dans ce cas précis.
+  const HULL_PADDING = 34;
+
+  function convexHull(points) {
+    if (points.length <= 2) return points.slice();
+    const pts = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
+    const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    const lower = [];
+    for (const p of pts) {
+      while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
+      lower.push(p);
+    }
+    const upper = [];
+    for (let i = pts.length - 1; i >= 0; i--) {
+      const p = pts[i];
+      while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
+      upper.push(p);
+    }
+    lower.pop();
+    upper.pop();
+    return lower.concat(upper);
+  }
+
+  // Gonfle l'enveloppe convexe vers l'extérieur (depuis le centroïde) ; pour 1 ou 2
+  // membres, construit directement un petit contour arrondi (pas d'enveloppe possible).
+  function paddedBlobPolygon(points, padding) {
+    if (points.length === 1) {
+      const p = points[0];
+      return Array.from({ length: 16 }, (_, i) => {
+        const a = (i / 16) * Math.PI * 2;
+        return { x: p.x + Math.cos(a) * padding, y: p.y + Math.sin(a) * padding };
+      });
+    }
+    if (points.length === 2) {
+      const [a, b] = points;
+      const mx = (a.x + b.x) / 2;
+      const my = (a.y + b.y) / 2;
+      const half = Math.hypot(a.x - b.x, a.y - b.y) / 2;
+      const angle = Math.atan2(b.y - a.y, b.x - a.x);
+      return Array.from({ length: 20 }, (_, i) => {
+        const t = (i / 20) * Math.PI * 2;
+        const rx = half + padding;
+        const ry = padding;
+        const x = Math.cos(t) * rx;
+        const y = Math.sin(t) * ry;
+        return {
+          x: mx + x * Math.cos(angle) - y * Math.sin(angle),
+          y: my + x * Math.sin(angle) + y * Math.cos(angle),
+        };
+      });
+    }
+    const hull = convexHull(points);
+    const cx = hull.reduce((s, p) => s + p.x, 0) / hull.length;
+    const cy = hull.reduce((s, p) => s + p.y, 0) / hull.length;
+    return hull.map((p) => {
+      const dx = p.x - cx;
+      const dy = p.y - cy;
+      const d = Math.hypot(dx, dy) || 1;
+      return { x: p.x + (dx / d) * padding, y: p.y + (dy / d) * padding };
+    });
+  }
+
+  function pointInPolygon(pt, poly) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const xi = poly[i].x;
+      const yi = poly[i].y;
+      const xj = poly[j].x;
+      const yj = poly[j].y;
+      const intersect = yi > pt.y !== yj > pt.y && pt.x < ((xj - xi) * (pt.y - yi)) / (yj - yi) + xi;
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
 
   function findCircleAt(canvasPos) {
-    return teamMeetingCircles.find(
-      (tm) => tm.pts && tm.pts.some((p) => Math.hypot(canvasPos.x - p.x, canvasPos.y - p.y) <= MEMBER_R)
-    );
+    return teamMeetingCircles.find((tm) => tm.poly && pointInPolygon(canvasPos, tm.poly));
   }
 
-  // Canvas hors-écran réutilisé (jamais recréé) pour calculer le contour net du blob
-  // fusionné d'une réunion : dessiner le disque plein puis "creuser" (destination-out)
-  // un disque légèrement plus petit donne la bande de bordure exacte, quel que soit le
-  // nombre de membres qui se chevauchent — un stroke() classique sur un Path2D à
-  // plusieurs cercles superposés tracerait aussi les arcs internes (effet "diagramme
-  // de Venn"), ce qu'on évite ainsi.
-  let ringBuffer = null;
-  function getRingBuffer(w, h) {
-    if (!ringBuffer) ringBuffer = document.createElement("canvas");
-    if (ringBuffer.width < w) ringBuffer.width = Math.ceil(w);
-    if (ringBuffer.height < h) ringBuffer.height = Math.ceil(h);
-    return ringBuffer;
-  }
-
-  function haloUnionPath(pts, r, ox, oy) {
+  function drawSmoothBlobPath(poly) {
     const path = new Path2D();
-    pts.forEach((p) => {
-      path.moveTo(p.x - ox + r, p.y - oy);
-      path.arc(p.x - ox, p.y - oy, r, 0, Math.PI * 2);
-    });
+    const n = poly.length;
+    const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+    const start = mid(poly[n - 1], poly[0]);
+    path.moveTo(start.x, start.y);
+    for (let i = 0; i < n; i++) {
+      const cur = poly[i];
+      const next = poly[(i + 1) % n];
+      const m = mid(cur, next);
+      path.quadraticCurveTo(cur.x, cur.y, m.x, m.y);
+    }
+    path.closePath();
     return path;
   }
 
@@ -679,57 +738,32 @@
       const positions = network.getPositions(tm.memberIds);
       const pts = tm.memberIds.map((id) => positions[id]).filter(Boolean);
       if (!pts.length) return;
-      tm.pts = pts;
+      const poly = paddedBlobPolygon(pts, HULL_PADDING);
+      tm.poly = poly;
       const cx = pts.reduce((s, pt) => s + pt.x, 0) / pts.length;
       const cy = pts.reduce((s, pt) => s + pt.y, 0) / pts.length;
 
       const active = pinnedId === "circle:" + tm.id || hoveredCircleId === tm.id;
       const fillColor = active ? textColor : color;
-      const ringW = active ? RING_W + 1 : RING_W;
+      const path = drawSmoothBlobPath(poly);
 
-      // Remplissage : union des halos réels, canvas fusionne nativement les cercles qui
-      // se chevauchent en une seule tache lisse (façon tache d'encre / main levée).
-      const fillPath = new Path2D();
-      pts.forEach((p) => {
-        fillPath.moveTo(p.x + MEMBER_R, p.y);
-        fillPath.arc(p.x, p.y, MEMBER_R, 0, Math.PI * 2);
-      });
       ctx.save();
       ctx.globalAlpha = pinnedId && !active ? 0.06 : 0.16;
       ctx.fillStyle = fillColor;
-      ctx.fill(fillPath, "nonzero");
+      ctx.fill(path);
+
+      ctx.globalAlpha = pinnedId && !active ? 0.15 : 1;
+      ctx.lineWidth = active ? 2.5 : 1.5;
+      ctx.strokeStyle = fillColor;
+      ctx.stroke(path);
       ctx.restore();
-
-      // Contour nets : uniquement le pourtour extérieur du blob, pas un cercle par membre.
-      const pad = MEMBER_R + ringW;
-      const minX = Math.min(...pts.map((p) => p.x)) - pad;
-      const maxX = Math.max(...pts.map((p) => p.x)) + pad;
-      const minY = Math.min(...pts.map((p) => p.y)) - pad;
-      const maxY = Math.max(...pts.map((p) => p.y)) + pad;
-      const w = maxX - minX;
-      const h = maxY - minY;
-      if (w > 0 && h > 0) {
-        const buf = getRingBuffer(w, h);
-        const bctx = buf.getContext("2d");
-        bctx.clearRect(0, 0, w, h);
-        bctx.fillStyle = fillColor;
-        bctx.fill(haloUnionPath(pts, MEMBER_R, minX, minY), "nonzero");
-        bctx.globalCompositeOperation = "destination-out";
-        bctx.fill(haloUnionPath(pts, MEMBER_R - ringW, minX, minY), "nonzero");
-        bctx.globalCompositeOperation = "source-over";
-
-        ctx.save();
-        ctx.globalAlpha = pinnedId && !active ? 0.25 : 0.9;
-        ctx.drawImage(buf, 0, 0, w, h, minX, minY, w, h);
-        ctx.restore();
-      }
 
       ctx.save();
       ctx.globalAlpha = pinnedId && !active ? 0.25 : 1;
       ctx.fillStyle = fillColor;
       ctx.font = "12px system-ui, -apple-system, sans-serif";
       ctx.textAlign = "center";
-      const labelY = Math.min(...pts.map((p) => p.y)) - MEMBER_R - ringW - 8;
+      const labelY = Math.min(...poly.map((p) => p.y)) - 8;
       ctx.fillText(tm.point.nom || "Réunion d'équipe", cx, labelY);
       ctx.restore();
     });
