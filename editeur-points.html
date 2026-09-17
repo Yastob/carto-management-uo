@@ -44,29 +44,9 @@
         </div>
       </div>
 
-      <div class="upload-step" id="step-rattach">
-        <div class="upload-step-head">
-          <span class="step-badge">2</span>
-          <strong>Rattachements</strong>
-          <span class="tag-optional">Facultatif — pour détecter les nouveaux/disparus par périmètre</span>
-        </div>
-        <div id="rattach-choice">
-          <label class="dropzone" id="dz-rattach">
-            <strong>Glisse-dépose</strong> rattachements.xlsx ici, ou clique pour choisir
-            <input type="file" id="file-rattach" accept=".xlsx">
-          </label>
-          <button class="btn btn-secondary btn-small" id="btn-skip-rattach">Ignorer cette étape</button>
-        </div>
-        <div class="loaded-row" id="loaded-rattach" style="display:none">
-          <span class="ok-icon">✓</span>
-          <span class="loaded-name" id="loaded-rattach-name"></span>
-          <button class="btn btn-secondary btn-small" id="btn-change-rattach">Changer de fichier</button>
-        </div>
-      </div>
-
       <div class="upload-step" id="step-points">
         <div class="upload-step-head">
-          <span class="step-badge">3</span>
+          <span class="step-badge">2</span>
           <strong>Réunions existantes</strong>
           <span class="tag-optional">Facultatif — pour continuer une saisie déjà commencée</span>
         </div>
@@ -98,11 +78,6 @@
             <option value="">Tous les périmètres</option>
           </select>
         </div>
-      </div>
-
-      <div class="panel" id="recap-panel" style="display:none">
-        <h2 style="margin-bottom:10px">Écarts détectés pour ce périmètre</h2>
-        <div id="recap-content"></div>
       </div>
 
       <div class="panel">

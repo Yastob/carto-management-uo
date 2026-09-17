@@ -630,111 +630,62 @@
     updateStats(scopedCollabs, relevantPoints);
   }
 
-  // Enveloppe convexe (Andrew's monotone chain) des positions des membres — sert de base
-  // à une forme "à main levée" qui épouse l'arrangement réel des points, au lieu d'un
-  // cercle englobant dont le rayon explose dès qu'un membre (souvent l'animateur) est
-  // positionné loin des autres à cause de sa hiérarchie.
-  function convexHull(points) {
-    const pts = points.slice().sort((a, b) => a.x - b.x || a.y - b.y);
-    const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
-    const lower = [];
-    for (const p of pts) {
-      while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
-      lower.push(p);
-    }
-    const upper = [];
-    for (let i = pts.length - 1; i >= 0; i--) {
-      const p = pts[i];
-      while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
-      upper.push(p);
-    }
-    upper.pop();
-    lower.pop();
-    return lower.concat(upper);
-  }
-
-  function pointInPolygon(pt, poly) {
-    let inside = false;
-    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-      const xi = poly[i].x,
-        yi = poly[i].y,
-        xj = poly[j].x,
-        yj = poly[j].y;
-      const intersect = yi > pt.y !== yj > pt.y && pt.x < ((xj - xi) * (pt.y - yi)) / (yj - yi) + xi;
-      if (intersect) inside = !inside;
-    }
-    return inside;
-  }
-
-  // Chemin fermé et lissé passant par les milieux des arêtes du polygone, avec chaque
-  // sommet d'origine comme point de contrôle — arrondit les angles pour un rendu plus
-  // organique/"à main levée" qu'un polygone brut.
-  function drawSmoothBlob(ctx, pts) {
-    const n = pts.length;
-    const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
-    const start = mid(pts[n - 1], pts[0]);
-    ctx.moveTo(start.x, start.y);
-    for (let i = 0; i < n; i++) {
-      const cur = pts[i];
-      const next = pts[(i + 1) % n];
-      const m = mid(cur, next);
-      ctx.quadraticCurveTo(cur.x, cur.y, m.x, m.y);
-    }
-    ctx.closePath();
-  }
+  // Un cercle englobant (ou même une enveloppe convexe) inclut TOUT son intérieur
+  // géométrique, y compris des zones vides où personne n'est réellement invité — donc
+  // si on glisse un nœud étranger au milieu du groupe, il se retrouve "dedans" à tort.
+  // Pour éviter ça par construction, on ne considère jamais un intérieur : chaque membre
+  // porte son propre halo (rayon MEMBER_R), et la forme dessinée est l'UNION de ces halos
+  // (un seul Path2D contenant tous les cercles, rempli en une fois — canvas fusionne
+  // naturellement les cercles qui se chevauchent). Un point ne compte "dans la réunion"
+  // que s'il est physiquement proche d'AU MOINS UN vrai membre, jamais par simple
+  // appartenance à une zone englobante.
+  const MEMBER_R = 42;
 
   function findCircleAt(canvasPos) {
-    return teamMeetingCircles.find((tm) => {
-      if (tm.hull && tm.hull.length >= 3) return pointInPolygon(canvasPos, tm.hull);
-      return tm.cx !== undefined && Math.hypot(canvasPos.x - tm.cx, canvasPos.y - tm.cy) <= tm.r;
-    });
+    return teamMeetingCircles.find(
+      (tm) => tm.pts && tm.pts.some((p) => Math.hypot(canvasPos.x - p.x, canvasPos.y - p.y) <= MEMBER_R)
+    );
   }
 
   function drawTeamMeetingCircles(ctx) {
     if (!network || !teamMeetingCircles.length) return;
     const color = cssVar("--edge-anim");
     const textColor = cssVar("--text-primary");
-    const PADDING = 32;
     teamMeetingCircles.forEach((tm) => {
       const positions = network.getPositions(tm.memberIds);
       const pts = tm.memberIds.map((id) => positions[id]).filter(Boolean);
       if (!pts.length) return;
+      tm.pts = pts;
       const cx = pts.reduce((s, pt) => s + pt.x, 0) / pts.length;
       const cy = pts.reduce((s, pt) => s + pt.y, 0) / pts.length;
-      tm.cx = cx;
-      tm.cy = cy;
-
-      let hull = null;
-      if (pts.length >= 3) {
-        const rawHull = convexHull(pts);
-        // Pousse chaque sommet vers l'extérieur (loin du centroïde) pour que le tracé
-        // passe autour des nœuds plutôt qu'à travers.
-        hull = rawHull.map((p) => {
-          const dx = p.x - cx;
-          const dy = p.y - cy;
-          const d = Math.hypot(dx, dy) || 1;
-          return { x: p.x + (dx / d) * PADDING, y: p.y + (dy / d) * PADDING };
-        });
-      } else {
-        tm.r = pts.length === 2 ? Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) / 2 + PADDING : 46;
-      }
-      tm.hull = hull;
 
       const active = pinnedId === "circle:" + tm.id || hoveredCircleId === tm.id;
+      const path = new Path2D();
+      pts.forEach((p) => {
+        path.moveTo(p.x + MEMBER_R, p.y);
+        path.arc(p.x, p.y, MEMBER_R, 0, Math.PI * 2);
+      });
+
       ctx.save();
-      ctx.setLineDash([7, 6]);
-      ctx.lineWidth = active ? 2.5 : 1.5;
-      ctx.strokeStyle = active ? textColor : color;
+      ctx.globalAlpha = pinnedId && !active ? 0.06 : 0.14;
+      ctx.fillStyle = active ? textColor : color;
+      ctx.fill(path, "nonzero");
+
       ctx.globalAlpha = pinnedId && !active ? 0.15 : 1;
-      ctx.beginPath();
-      if (hull) drawSmoothBlob(ctx, hull);
-      else ctx.arc(cx, cy, tm.r, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.setLineDash([5, 4]);
+      ctx.lineWidth = active ? 2 : 1.3;
+      ctx.strokeStyle = active ? textColor : color;
+      pts.forEach((p) => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, MEMBER_R, 0, Math.PI * 2);
+        ctx.stroke();
+      });
       ctx.setLineDash([]);
+
       ctx.fillStyle = active ? textColor : color;
       ctx.font = "12px system-ui, -apple-system, sans-serif";
       ctx.textAlign = "center";
-      const labelY = hull ? Math.min(...hull.map((p) => p.y)) - 8 : cy - tm.r - 8;
+      const labelY = Math.min(...pts.map((p) => p.y)) - MEMBER_R - 8;
       ctx.fillText(tm.point.nom || "Réunion d'équipe", cx, labelY);
       ctx.restore();
     });

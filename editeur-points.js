@@ -15,8 +15,6 @@
   }
 
   let collaborateurs = []; // {id, nom, prenom, poste, senior_manager_id}
-  let collabPrevById = {}; // id -> senior_manager_id, photo du collaborateurs.xlsx précédent
-  let rattachIds = new Set(); // ids déjà présents dans rattachements.xlsx chargé (recap "nouveaux")
   let points = []; // {id, nom, animateur_id, participants: Set<id>, type, periodicite, ordre_du_jour, actif}
   let editingId = null;
   let lastAnimateurId = ""; // repris par défaut pour la prochaine réunion ajoutée
@@ -24,19 +22,12 @@
 
   const els = {
     fileCollab: document.getElementById("file-collab"),
-    fileRattach: document.getElementById("file-rattach"),
     filePoints: document.getElementById("file-points"),
     dzCollab: document.getElementById("dz-collab"),
-    dzRattach: document.getElementById("dz-rattach"),
     dzPoints: document.getElementById("dz-points"),
     loadedCollab: document.getElementById("loaded-collab"),
     loadedCollabName: document.getElementById("loaded-collab-name"),
     btnChangeCollab: document.getElementById("btn-change-collab"),
-    rattachChoice: document.getElementById("rattach-choice"),
-    loadedRattach: document.getElementById("loaded-rattach"),
-    loadedRattachName: document.getElementById("loaded-rattach-name"),
-    btnChangeRattach: document.getElementById("btn-change-rattach"),
-    btnSkipRattach: document.getElementById("btn-skip-rattach"),
     pointsChoice: document.getElementById("points-choice"),
     loadedPoints: document.getElementById("loaded-points"),
     loadedPointsName: document.getElementById("loaded-points-name"),
@@ -48,8 +39,6 @@
     stepEdit: document.getElementById("step-edit"),
     perimeterWrap: document.getElementById("perimeter-wrap"),
     filterSm: document.getElementById("filter-sm"),
-    recapPanel: document.getElementById("recap-panel"),
-    recapContent: document.getElementById("recap-content"),
     formTitle: document.getElementById("form-title"),
     fType: document.getElementById("f-type"),
     fPeriodicite: document.getElementById("f-periodicite"),
@@ -127,14 +116,6 @@
     els.btnContinue.disabled = collaborateurs.length === 0;
   }
 
-  function rowsToCollabPrevMap(rows) {
-    const map = {};
-    (rows || []).filter((r) => norm(r.id)).forEach((r) => {
-      map[norm(r.id)] = norm(r.senior_manager_id);
-    });
-    return map;
-  }
-
   // ---------- Étape 1 : Collaborateurs (obligatoire) ----------
   function applyCollabRows(rows, label) {
     collaborateurs = rows
@@ -159,7 +140,6 @@
       const wb = await readWorkbook(file);
       const rows = sheetRows(wb, "Collaborateurs");
       CartoState.save("collab", rows);
-      collabPrevById = rowsToCollabPrevMap(CartoState.load("collabPrev"));
       applyCollabRows(rows, file.name);
     } catch (err) {
       alert("Impossible de lire ce fichier : " + err.message);
@@ -168,49 +148,13 @@
 
   els.btnChangeCollab.addEventListener("click", () => {
     collaborateurs = [];
-    // On ne vide pas la session ici : elle doit rester intacte jusqu'au prochain
-    // upload, pour que celui-ci puisse correctement basculer l'ancienne valeur en
-    // "collabPrev" (nécessaire à la détection des départs).
     els.fileCollab.value = "";
     els.dzCollab.style.display = "block";
     els.loadedCollab.style.display = "none";
     updateContinueState();
   });
 
-  // ---------- Étape 2 : Rattachements (facultatif, pour le récap nouveaux/disparus) ----------
-  function applyRattachRows(rows, label) {
-    rattachIds = new Set(rows.map((r) => norm(r.id)).filter(Boolean));
-    els.rattachChoice.style.display = "none";
-    els.loadedRattach.style.display = "flex";
-    els.loadedRattachName.textContent = `${label} (${rows.length} ligne(s))`;
-  }
-
-  wireDropzone(els.dzRattach, els.fileRattach, async (file) => {
-    try {
-      const wb = await readWorkbook(file);
-      const rows = sheetRows(wb, "Rattachements");
-      CartoState.save("rattach", rows);
-      applyRattachRows(rows, file.name);
-    } catch (err) {
-      alert("Impossible de lire ce fichier : " + err.message);
-    }
-  });
-  els.btnSkipRattach.addEventListener("click", () => {
-    rattachIds = new Set();
-    CartoState.clear("rattach");
-    els.rattachChoice.style.display = "none";
-    els.loadedRattach.style.display = "flex";
-    els.loadedRattachName.textContent = "Ignoré";
-  });
-  els.btnChangeRattach.addEventListener("click", () => {
-    rattachIds = new Set();
-    CartoState.clear("rattach");
-    els.fileRattach.value = "";
-    els.rattachChoice.style.display = "block";
-    els.loadedRattach.style.display = "none";
-  });
-
-  // ---------- Étape 3 : Réunions existantes (facultatif) ----------
+  // ---------- Étape 2 : Réunions existantes (facultatif) ----------
   function applyPointRows(rows, label) {
     points = rows
       .filter((r) => norm(r.id))
@@ -260,11 +204,8 @@
 
   // ---------- Restauration depuis la session (changement d'onglet sans réupload) ----------
   (function hydrateFromSession() {
-    collabPrevById = rowsToCollabPrevMap(CartoState.load("collabPrev"));
     const savedCollab = CartoState.load("collab");
     if (savedCollab && savedCollab.length) applyCollabRows(savedCollab, "Session précédente");
-    const savedRattach = CartoState.load("rattach");
-    if (savedRattach && savedRattach.length) applyRattachRows(savedRattach, "Session précédente");
     const savedPoints = CartoState.load("points");
     if (savedPoints && savedPoints.length) applyPointRows(savedPoints, "Session précédente");
   })();
@@ -311,54 +252,6 @@
   }
   function visibleCollaborateurs() {
     return collaborateurs.filter(matchesPerimeter);
-  }
-
-  // Écarts pour le périmètre sélectionné (rattachements OU réunions) :
-  // - Nouveaux : rattachés à ce SM dans collaborateurs.xlsx, mais jamais vus ni dans
-  //   rattachements.xlsx ni dans reunions.xlsx chargés.
-  // - Disparus : étaient rattachés à ce SM dans le PRÉCÉDENT collaborateurs.xlsx, mais
-  //   ne le sont plus (parti du référentiel, ou réaffecté à un autre SM).
-  function computeRecap(smId) {
-    const involvedInPoints = new Set();
-    points.forEach((p) => {
-      if (p.animateur_id) involvedInPoints.add(p.animateur_id);
-      p.participants.forEach((id) => involvedInPoints.add(id));
-    });
-
-    const currentIds = new Set(
-      collaborateurs.filter((c) => c.id !== smId && c.senior_manager_id === smId).map((c) => c.id)
-    );
-    const nouveaux = [...currentIds]
-      .filter((id) => !rattachIds.has(id) && !involvedInPoints.has(id))
-      .map((id) => collabName(findCollab(id)));
-
-    const prevIds = new Set(
-      Object.keys(collabPrevById).filter((id) => id !== smId && collabPrevById[id] === smId)
-    );
-    const disparus = [...prevIds]
-      .filter((id) => !currentIds.has(id))
-      .map((id) => {
-        const c = findCollab(id);
-        return c ? `${collabName(c)} (plus rattaché à ce SM)` : `${id} (absent de collaborateurs.xlsx)`;
-      });
-
-    return { nouveaux, disparus };
-  }
-
-  function renderRecap() {
-    const smFilter = perimeter;
-    const showRecap = smFilter && smFilter !== "__non_assigne__";
-    els.recapPanel.style.display = showRecap ? "block" : "none";
-    if (!showRecap) return;
-    const { nouveaux, disparus } = computeRecap(smFilter);
-    if (!nouveaux.length && !disparus.length) {
-      els.recapContent.innerHTML = `<div class="muted-note">Aucun écart détecté pour ce périmètre.</div>`;
-      return;
-    }
-    els.recapContent.innerHTML = `
-      ${nouveaux.length ? `<div class="tt-row"><span class="tt-label">Nouveaux, jamais vus dans rattachements/reunions (${nouveaux.length}) :</span> ${nouveaux.join(", ")}</div>` : ""}
-      ${disparus.length ? `<div class="tt-row" style="margin-top:6px"><span class="tt-label">Ne sont plus rattachés à ce SM (${disparus.length}) :</span> ${disparus.join(", ")}</div>` : ""}
-    `;
   }
 
   // Aide à la saisie : qui n'apparaît encore dans aucune réunion active (ni comme
@@ -546,7 +439,6 @@
   }
 
   function render() {
-    renderRecap();
     renderUncovered();
     els.countPoints.textContent = points.length;
     els.tableBody.innerHTML = points

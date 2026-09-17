@@ -45,6 +45,8 @@ Rien n'est envoyé sur un serveur : tout est lu et interprété dans le navigate
 3. Ouvre `editeur-points.html`, charge `collaborateurs.xlsx` (même filtre de
    périmètre disponible), crée les réunions (animateur, participants via cases à
    cocher, ordre du jour...), télécharge `reunions.xlsx` (à placer dans `data/`).
+   Un encart rappelle en permanence les collaborateurs du périmètre affiché qui ne
+   sont couverts par aucune réunion (individuelle ou d'équipe) active.
 4. Ouvre `index.html`, charge les fichiers → cartographie interactive.
 
 Pour mettre à jour plus tard : recharge le fichier existant dans l'éditeur concerné
@@ -52,13 +54,14 @@ Pour mettre à jour plus tard : recharge le fichier existant dans l'éditeur con
 l'enrichir, puis re-télécharge. `collaborateurs.xlsx` s'édite directement dans Excel
 (ajoute une ligne pour un nouvel arrivant, ne réécris jamais tout depuis zéro).
 
-**Détection des écarts** : dans les 2 pages de paramétrage, dès qu'un périmètre de SM
-est sélectionné, un encart signale automatiquement les écarts avec les fichiers déjà
-chargés — un nouveau collaborateur rattaché à ce SM mais jamais vu dans
-rattachements.xlsx/reunions.xlsx, ou quelqu'un qui était rattaché à ce SM dans le
+**Détection des écarts** : dans l'éditeur de rattachements, dès qu'un périmètre de SM
+est sélectionné, un encart signale automatiquement les écarts avec le fichier
+rattachements.xlsx déjà chargé — un nouveau collaborateur rattaché à ce SM mais
+jamais vu dans rattachements.xlsx, ou quelqu'un qui était rattaché à ce SM dans le
 précédent collaborateurs.xlsx chargé et qui ne l'est plus (parti, ou réaffecté à un
-autre SM). Les nouveaux collaborateurs apparaissent aussi en tête de la table dans
-l'éditeur de rattachements.
+autre SM). Les nouveaux collaborateurs apparaissent aussi en tête de la table.
+(L'éditeur de réunions n'a pas besoin de rattachements.xlsx : il propose son propre
+encart "Collaborateurs sans réunion", basé uniquement sur les réunions déjà créées.)
 
 Dans le formulaire d'ajout d'une réunion, un `*` marque les champs obligatoires
 (Animateur et Collaborateur pour une réunion individuelle) — le nom de la réunion et
@@ -107,12 +110,26 @@ avec des exemples — sauvegarde tes données avant si besoin.
 
 ## Légende de la visualisation
 
-- Couleur du cercle = rôle : violet SM, vert Manager, magenta Chef de projet/Directeur
-  de projet, bleu Consultant. Carré orange = réunion.
+- Couleur du nœud = rôle : violet Senior Manager, vert Manager, magenta Chef de
+  projet/Directeur de projet, bleu Consultant.
 - Anneau rouge toujours visible = tag "En fragilité". ⚠ toujours visible = aucune
   réunion commune avec un responsable (SM/Manager/CP) — l'objectif final de l'outil.
-- Trait plein gris = lien Senior Manager ; pointillé = Manager ; pointillé fin =
-  Chef de projet. Trait orange épais = anime la réunion ; pointillé marron = participe.
+- Pastilles de tags : jaune = "Haut potentiel", magenta = "Consultant isolé".
+- **Liens d'encadrement (case à cocher "Afficher les rattachements", décochée par
+  défaut)** : trait plein = Senior Manager (réel), pointillé = Manager, pointillé
+  fin = Chef de projet. Masqués par défaut pour ne pas surcharger le graphe — à
+  activer pour visualiser la ligne hiérarchique.
+- **Réunions (case à cocher "Afficher les réunions", cochée par défaut)** :
+  - Réunion d'équipe → chaque participant reçoit son propre halo en pointillés ; le
+    nom de la réunion s'affiche au-dessus. Être "dans la réunion" ne dépend que de la
+    proximité réelle à un participant invité — faire glisser un collaborateur externe
+    au milieu du groupe ne le fait jamais entrer dans la réunion, même visuellement.
+  - Réunion individuelle → simple trait reliant l'animateur et le collaborateur (pas
+    d'étiquette, pour éviter la répétition).
+- **Filtres Compte / SM** (menus déroulants en haut) : une réunion partiellement hors
+  filtre reste affichée, mais les personnes hors périmètre y apparaissent grisées
+  (avec la mention "Hors du filtre actuel" au survol) plutôt que d'être masquées.
 - Survoler un nœud affiche le détail (y compris qui il encadre) et met en évidence
   ses relations directes. Cliquer dessus épingle l'affichage et zoome sur son
-  entourage ; cliquer dans le vide réinitialise la vue.
+  entourage ; cliquer dans le vide réinitialise la vue. La recherche retrouve aussi
+  les réunions d'équipe par leur nom.
