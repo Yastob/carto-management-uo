@@ -31,12 +31,44 @@ window.CartoXlsx = (function () {
     return v === undefined || v === null ? "" : String(v).trim();
   }
 
+  const POSTES_CONNUS = ["Senior Manager", "Manager", "Chef de projet", "Directeur de projet", "Consultant"];
+
+  // Le format étant flexible (colonnes identifiées par position, pas par nom), un fichier
+  // dont les colonnes ne sont pas dans l'ordre attendu se lit "sans erreur" mais avec des
+  // valeurs décalées d'une colonne — silencieusement, ce qui casse le lien SM/collaborateur
+  // sans qu'on comprenne pourquoi. On détecte les 2 symptômes les plus probables et on
+  // prévient tout de suite plutôt que de laisser le filtre par périmètre échouer en silence.
+  function warnIfMisaligned(rows) {
+    if (!rows.length) return;
+    const avecPoste = rows.filter((r) => r.poste);
+    if (avecPoste.length && !avecPoste.some((r) => POSTES_CONNUS.includes(r.poste))) {
+      alert(
+        'La colonne "poste" ne contient aucune valeur reconnue (Senior Manager / Manager / ' +
+          "Chef de projet / Directeur de projet / Consultant).\n\n" +
+          "Vérifie que les 5 premières colonnes de ton fichier collaborateurs sont bien, dans " +
+          "cet ordre : id, nom, prenom, poste, senior_manager_id — le texte des en-têtes n'a " +
+          "pas d'importance, seul l'ordre compte."
+      );
+      return;
+    }
+    const aUnSm = rows.some((r) => r.poste === "Senior Manager");
+    const aUnRattachement = rows.some((r) => r.senior_manager_id);
+    if (aUnSm && rows.length > 1 && !aUnRattachement) {
+      alert(
+        "Aucun collaborateur n'a de senior_manager_id renseigné, alors qu'un Senior Manager " +
+          "existe dans le fichier.\n\n" +
+          "Vérifie que la 5e colonne de ton fichier collaborateurs correspond bien à " +
+          "senior_manager_id (ordre attendu : id, nom, prenom, poste, senior_manager_id)."
+      );
+    }
+  }
+
   function readCollaborateurs(wb) {
     const name = findDataSheetName(wb);
     const sheet = name && wb.Sheets[name];
     if (!sheet) return [];
     const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", blankrows: false });
-    return grid
+    const rows = grid
       .slice(1)
       .filter((row) => row.some((c) => String(c).trim() !== ""))
       .map((row) => ({
@@ -46,6 +78,8 @@ window.CartoXlsx = (function () {
         poste: cell(row, 3),
         senior_manager_id: cell(row, 4),
       }));
+    warnIfMisaligned(rows);
+    return rows;
   }
 
   return { readCollaborateurs };
