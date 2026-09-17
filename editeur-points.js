@@ -20,6 +20,9 @@
   let lastAnimateurId = ""; // repris par défaut pour la prochaine réunion ajoutée
   let lastPeriodicite = "Hebdomadaire"; // idem pour la périodicité
   let perimeter = ""; // id d'un SM, "__non_assigne__", ou "" (tous)
+  let participantsSelection = new Set(); // ids cochés pour la réunion en cours, persistant
+  // au-delà de ce que la recherche affiche à l'écran (une personne cochée puis masquée par
+  // un filtre de recherche reste cochée).
 
   const els = {
     fileCollab: document.getElementById("file-collab"),
@@ -315,25 +318,32 @@
     renderParticipantsList();
   }
 
-  function renderParticipantsList(filter, checkedIds) {
+  function renderParticipantsList(filter) {
     filter = norm(filter).toLowerCase();
-    const checked = checkedIds || new Set();
     const list = visibleCollaborateurs().filter((c) => !filter || collabName(c).toLowerCase().includes(filter));
     els.fParticipants.innerHTML =
       list
         .map(
           (c) => `
       <label class="check-item">
-        <input type="checkbox" value="${c.id}" ${checked.has(c.id) ? "checked" : ""}>
+        <input type="checkbox" value="${c.id}" ${participantsSelection.has(c.id) ? "checked" : ""}>
         ${collabName(c)}
       </label>`
         )
         .join("") || `<div class="muted-note">Aucun résultat</div>`;
   }
 
+  // La sélection vit dans participantsSelection, pas dans le DOM : cocher quelqu'un puis
+  // filtrer la liste par recherche ne doit jamais faire perdre une coche précédente, même
+  // si la personne cochée disparaît temporairement de la liste affichée.
+  els.fParticipants.addEventListener("change", (e) => {
+    if (e.target.type !== "checkbox") return;
+    if (e.target.checked) participantsSelection.add(e.target.value);
+    else participantsSelection.delete(e.target.value);
+  });
+
   els.fParticipantsSearch.addEventListener("input", () => {
-    const checked = new Set([...els.fParticipants.querySelectorAll("input:checked")].map((i) => i.value));
-    renderParticipantsList(els.fParticipantsSearch.value, checked);
+    renderParticipantsList(els.fParticipantsSearch.value);
   });
 
   function applyTypeVisibility() {
@@ -366,6 +376,7 @@
     els.fOdj.value = "";
     els.fActif.checked = true;
     els.fParticipantsSearch.value = "";
+    participantsSelection = new Set();
     renderParticipantsList();
     applyTypeVisibility();
   }
@@ -386,7 +397,8 @@
       els.fCollaborateur.value = [...point.participants][0] || "";
     } else {
       els.fAnimateur.value = point.animateur_id;
-      renderParticipantsList("", point.participants);
+      participantsSelection = new Set(point.participants);
+      renderParticipantsList();
     }
     applyTypeVisibility();
   }
@@ -408,7 +420,7 @@
       }
     } else {
       animateur_id = els.fAnimateur.value;
-      participants = new Set([...els.fParticipants.querySelectorAll("input:checked")].map((i) => i.value));
+      participants = new Set(participantsSelection);
       nom = norm(els.fNom.value);
     }
 
