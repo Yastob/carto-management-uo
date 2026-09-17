@@ -7,6 +7,21 @@
     { key: "tag_consultant_isole", label: "Consultant isolé", color: "--slot-magenta" },
   ];
 
+  // Palette Okabe-Ito : conçue pour rester distinguable en cas de daltonisme
+  // (protanopie/deutéranopie/tritanopie), volontairement sans paire rouge/vert.
+  const PERIODICITE_ORDER = ["Hebdomadaire", "2 fois par mois", "Mensuel", "Tous les 2 mois", "Ponctuel"];
+  const PERIODICITE_COLORS = {
+    Hebdomadaire: "#0072B2",
+    "2 fois par mois": "#56B4E9",
+    Mensuel: "#009E73",
+    "Tous les 2 mois": "#E69F00",
+    Ponctuel: "#D55E00",
+  };
+  const PERIODICITE_DEFAULT_COLOR = "#9a9a9a"; // périodicité "Autre" ou non reconnue
+  function periodiciteColor(periodicite) {
+    return PERIODICITE_COLORS[periodicite] || PERIODICITE_DEFAULT_COLOR;
+  }
+
   const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   const isOui = (v) => String(v || "").trim().toLowerCase() === "oui";
   const norm = (v) => (v === undefined || v === null ? "" : String(v).trim());
@@ -30,6 +45,7 @@
   let pinnedId = null;
   let hoveringNode = false;
   let selectedIds = new Set(); // sélection multiple (Ctrl/Maj+clic), indépendante de pinnedId
+  let colorByPeriodicite = false; // lu par drawTeamMeetingCircles, hors de la portée de rebuildGraph
   let teamMeetingCircles = []; // réunions non-individuelles : dessinées en cercle, pas en nœud
   let hoveredCircleId = null;
   let hautPotentielNodes = []; // {id, size} : pastille jaune toujours visible, en plus du survol
@@ -67,6 +83,9 @@
     pointsTypeFilters: document.getElementById("points-type-filters"),
     togglePointsIndividuel: document.getElementById("toggle-points-individuel"),
     togglePointsEquipe: document.getElementById("toggle-points-equipe"),
+    togglePeriodicite: document.getElementById("toggle-periodicite"),
+    legendPeriodicite: document.getElementById("legend-periodicite"),
+    legendPeriodiciteRows: document.getElementById("legend-periodicite-rows"),
     filterCompte: document.getElementById("filter-compte"),
     filterSmViz: document.getElementById("filter-sm-viz"),
     stats: document.getElementById("stats"),
@@ -260,6 +279,19 @@
   }
   updatePointsTypeFiltersVisibility();
 
+  function renderPeriodiciteLegend() {
+    els.legendPeriodiciteRows.innerHTML = PERIODICITE_ORDER.map(
+      (label) =>
+        `<div class="legend-row"><span class="legend-swatch" style="background:${PERIODICITE_COLORS[label]}"></span> ${label}</div>`
+    ).join("") + `<div class="legend-row"><span class="legend-swatch" style="background:${PERIODICITE_DEFAULT_COLOR}"></span> Autre / non précisée</div>`;
+  }
+  renderPeriodiciteLegend();
+
+  function updatePeriodiciteLegendVisibility() {
+    els.legendPeriodicite.style.display = els.togglePeriodicite.checked ? "block" : "none";
+  }
+  updatePeriodiciteLegendVisibility();
+
   els.toggleRattachements.addEventListener("change", rebuildGraph);
   els.togglePoints.addEventListener("change", () => {
     updatePointsTypeFiltersVisibility();
@@ -267,6 +299,10 @@
   });
   els.togglePointsIndividuel.addEventListener("change", rebuildGraph);
   els.togglePointsEquipe.addEventListener("change", rebuildGraph);
+  els.togglePeriodicite.addEventListener("change", () => {
+    updatePeriodiciteLegendVisibility();
+    rebuildGraph();
+  });
   els.filterCompte.addEventListener("change", rebuildGraph);
   els.filterSmViz.addEventListener("change", rebuildGraph);
   els.search.addEventListener("input", onSearch);
@@ -410,6 +446,7 @@
     const showPoints = els.togglePoints.checked;
     const showPointsIndividuel = els.togglePointsIndividuel.checked;
     const showPointsEquipe = els.togglePointsEquipe.checked;
+    colorByPeriodicite = els.togglePeriodicite.checked;
     const filterCompte = els.filterCompte.value;
     const filterSm = els.filterSmViz.value;
     const hasFilter = !!(filterCompte || filterSm);
@@ -545,7 +582,7 @@
             id: "im:" + p.id,
             from: "c:" + p.animateur_id,
             to: "c:" + other,
-            color: { color: cssVar("--edge-anim") },
+            color: { color: colorByPeriodicite ? periodiciteColor(p.periodicite) : cssVar("--edge-anim") },
             width: 2,
             _kind: "individual-meeting",
             _refId: p.id,
@@ -775,7 +812,7 @@
 
   function drawTeamMeetingCircles(ctx) {
     if (!network || !teamMeetingCircles.length) return;
-    const color = cssVar("--edge-anim");
+    const baseColor = cssVar("--edge-anim");
     const textColor = cssVar("--text-primary");
     teamMeetingCircles.forEach((tm) => {
       const positions = network.getPositions(tm.memberIds);
@@ -786,6 +823,7 @@
       const cx = pts.reduce((s, pt) => s + pt.x, 0) / pts.length;
       const cy = pts.reduce((s, pt) => s + pt.y, 0) / pts.length;
 
+      const color = colorByPeriodicite ? periodiciteColor(tm.point.periodicite) : baseColor;
       const active = pinnedId === "circle:" + tm.id || hoveredCircleId === tm.id;
       const fillColor = active ? textColor : color;
       const path = drawSmoothBlobPath(poly);

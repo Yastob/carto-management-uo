@@ -142,6 +142,13 @@ supprimant la ligne correspondante plutôt qu'en la désactivant.
     peut le faire apparaître visuellement dedans (sans conséquence sur les données).
   - Réunion individuelle → simple trait reliant l'animateur et le collaborateur (pas
     d'étiquette, pour éviter la répétition).
+- **Colorer par périodicité** (case à cocher, décochée par défaut) : recolore les
+  traits de réunion individuelle et les formes de réunion d'équipe selon leur
+  périodicité, avec la palette Okabe-Ito (conçue pour rester distinguable en cas de
+  daltonisme — sans paire rouge/vert) : bleu (Hebdomadaire), bleu ciel (2 fois par
+  mois), vert bleuté (Mensuel), orange (Tous les 2 mois), vermillon (Ponctuel), gris
+  (Autre ou valeur non reconnue). Une légende dédiée apparaît tant que la case est
+  cochée. Les couleurs de rôle des personnes ne changent pas.
 - **Filtres Compte / SM** (menus déroulants en haut) : une réunion partiellement hors
   filtre reste affichée, mais les personnes hors périmètre y apparaissent grisées
   (avec la mention "Hors du filtre actuel" au survol) plutôt que d'être masquées.

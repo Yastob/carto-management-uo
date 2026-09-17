@@ -111,6 +111,9 @@
           <input type="checkbox" id="toggle-points-equipe" checked> Équipe
         </label>
       </span>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-periodicite"> Colorer par périodicité
+      </label>
       <select id="filter-compte" style="padding:6px 9px;border:1px solid var(--gridline);border-radius:6px;font-size:12.5px;background:var(--surface-1);color:var(--text-primary)">
         <option value="">Tous les comptes</option>
       </select>
@@ -142,6 +145,10 @@
         <h2>Réunions</h2>
         <div class="legend-row"><span class="legend-circle" style="color:var(--edge-anim);border-color:var(--edge-anim)"></span> Réunion d'équipe (dans la forme = dans la réunion)</div>
         <div class="legend-row"><span class="legend-line" style="border-color:var(--edge-anim)"></span> Réunion individuelle (entre les 2 personnes reliées)</div>
+        <div id="legend-periodicite" style="display:none">
+          <h2>Périodicité (couleur)</h2>
+          <div id="legend-periodicite-rows"></div>
+        </div>
         <h2>Filtres (Compte / SM)</h2>
         <div class="legend-row"><span class="legend-swatch" style="background:var(--node-person-muted)"></span> Hors filtre, affiché car présent dans une réunion filtrée</div>
         <h2>Tags (au survol)</h2>
