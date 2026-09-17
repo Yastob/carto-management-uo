@@ -31,6 +31,7 @@
   let hoveringNode = false;
   let teamMeetingCircles = []; // réunions non-individuelles : dessinées en cercle, pas en nœud
   let hoveredCircleId = null;
+  let hautPotentielNodes = []; // {id, size} : pastille jaune toujours visible, en plus du survol
   let state = { collaborateurs: [], points: [] };
   let raw = { collab: null, rattach: null, points: null };
 
@@ -511,6 +512,9 @@
     // - Équipe/Autre : un cercle en pointillé dessiné autour de ses membres (dans le cercle =
     //   dans la réunion), recalculé à chaque frame pour suivre les nœuds (cf. drawTeamMeetingCircles).
     teamMeetingCircles = [];
+    hautPotentielNodes = collabs
+      .filter((c) => !contextualIds.has(c.id) && c.tags.includes("Haut potentiel"))
+      .map((c) => ({ id: "c:" + c.id, size: roleOf(c.poste) === "SM" ? 22 : roleOf(c.poste) ? 16 : 12 }));
     for (const p of relevantPoints) {
       const memberIds = [p.animateur_id, ...p.participants].filter(
         (id, idx, arr) => id && collabIds.has(id) && arr.indexOf(id) === idx
@@ -607,7 +611,10 @@
       clearHighlight();
       network.fit({ animation: { duration: 400 } });
     });
-    network.on("afterDrawing", (ctx) => drawTeamMeetingCircles(ctx));
+    network.on("afterDrawing", (ctx) => {
+      drawTeamMeetingCircles(ctx);
+      drawHautPotentielBadges(ctx);
+    });
     // Survol des cercles de réunion d'équipe : vis-network ne gère pas ces formes
     // custom, donc hit-test manuel sur les coordonnées canvas de la souris.
     const canvasEl = network.canvas.frame.canvas;
@@ -765,6 +772,30 @@
       ctx.textAlign = "center";
       const labelY = Math.min(...poly.map((p) => p.y)) - 8;
       ctx.fillText(tm.point.nom || "Réunion d'équipe", cx, labelY);
+      ctx.restore();
+    });
+  }
+
+  // Pastille jaune toujours visible (en plus du survol) en coin haut-droit du nœud,
+  // pour repérer les hauts potentiels d'un coup d'œil sans avoir à survoler chacun.
+  function drawHautPotentielBadges(ctx) {
+    if (!network || !hautPotentielNodes.length) return;
+    const color = cssVar("--status-warning");
+    const ids = hautPotentielNodes.map((n) => n.id);
+    const positions = network.getPositions(ids);
+    hautPotentielNodes.forEach(({ id, size }) => {
+      const p = positions[id];
+      if (!p) return;
+      const bx = p.x + size * 0.7;
+      const by = p.y - size * 0.7;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(bx, by, 5, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = cssVar("--surface-1") || "#1a1a1a";
+      ctx.stroke();
       ctx.restore();
     });
   }
