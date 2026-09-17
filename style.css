@@ -217,10 +217,11 @@ main {
 .legend-line.dashed { border-top-style: dashed; }
 .legend-line.dotted { border-top-style: dotted; }
 .legend-circle {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  border: 2px dashed;
+  border: 2px solid;
+  background: color-mix(in srgb, currentColor 16%, transparent);
   flex-shrink: 0;
 }
 

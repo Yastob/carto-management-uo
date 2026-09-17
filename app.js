@@ -640,11 +640,35 @@
   // que s'il est physiquement proche d'AU MOINS UN vrai membre, jamais par simple
   // appartenance à une zone englobante.
   const MEMBER_R = 42;
+  const RING_W = 3; // épaisseur du contour du blob fusionné (4 quand la réunion est active)
 
   function findCircleAt(canvasPos) {
     return teamMeetingCircles.find(
       (tm) => tm.pts && tm.pts.some((p) => Math.hypot(canvasPos.x - p.x, canvasPos.y - p.y) <= MEMBER_R)
     );
+  }
+
+  // Canvas hors-écran réutilisé (jamais recréé) pour calculer le contour net du blob
+  // fusionné d'une réunion : dessiner le disque plein puis "creuser" (destination-out)
+  // un disque légèrement plus petit donne la bande de bordure exacte, quel que soit le
+  // nombre de membres qui se chevauchent — un stroke() classique sur un Path2D à
+  // plusieurs cercles superposés tracerait aussi les arcs internes (effet "diagramme
+  // de Venn"), ce qu'on évite ainsi.
+  let ringBuffer = null;
+  function getRingBuffer(w, h) {
+    if (!ringBuffer) ringBuffer = document.createElement("canvas");
+    if (ringBuffer.width < w) ringBuffer.width = Math.ceil(w);
+    if (ringBuffer.height < h) ringBuffer.height = Math.ceil(h);
+    return ringBuffer;
+  }
+
+  function haloUnionPath(pts, r, ox, oy) {
+    const path = new Path2D();
+    pts.forEach((p) => {
+      path.moveTo(p.x - ox + r, p.y - oy);
+      path.arc(p.x - ox, p.y - oy, r, 0, Math.PI * 2);
+    });
+    return path;
   }
 
   function drawTeamMeetingCircles(ctx) {
@@ -660,32 +684,52 @@
       const cy = pts.reduce((s, pt) => s + pt.y, 0) / pts.length;
 
       const active = pinnedId === "circle:" + tm.id || hoveredCircleId === tm.id;
-      const path = new Path2D();
+      const fillColor = active ? textColor : color;
+      const ringW = active ? RING_W + 1 : RING_W;
+
+      // Remplissage : union des halos réels, canvas fusionne nativement les cercles qui
+      // se chevauchent en une seule tache lisse (façon tache d'encre / main levée).
+      const fillPath = new Path2D();
       pts.forEach((p) => {
-        path.moveTo(p.x + MEMBER_R, p.y);
-        path.arc(p.x, p.y, MEMBER_R, 0, Math.PI * 2);
+        fillPath.moveTo(p.x + MEMBER_R, p.y);
+        fillPath.arc(p.x, p.y, MEMBER_R, 0, Math.PI * 2);
       });
+      ctx.save();
+      ctx.globalAlpha = pinnedId && !active ? 0.06 : 0.16;
+      ctx.fillStyle = fillColor;
+      ctx.fill(fillPath, "nonzero");
+      ctx.restore();
+
+      // Contour nets : uniquement le pourtour extérieur du blob, pas un cercle par membre.
+      const pad = MEMBER_R + ringW;
+      const minX = Math.min(...pts.map((p) => p.x)) - pad;
+      const maxX = Math.max(...pts.map((p) => p.x)) + pad;
+      const minY = Math.min(...pts.map((p) => p.y)) - pad;
+      const maxY = Math.max(...pts.map((p) => p.y)) + pad;
+      const w = maxX - minX;
+      const h = maxY - minY;
+      if (w > 0 && h > 0) {
+        const buf = getRingBuffer(w, h);
+        const bctx = buf.getContext("2d");
+        bctx.clearRect(0, 0, w, h);
+        bctx.fillStyle = fillColor;
+        bctx.fill(haloUnionPath(pts, MEMBER_R, minX, minY), "nonzero");
+        bctx.globalCompositeOperation = "destination-out";
+        bctx.fill(haloUnionPath(pts, MEMBER_R - ringW, minX, minY), "nonzero");
+        bctx.globalCompositeOperation = "source-over";
+
+        ctx.save();
+        ctx.globalAlpha = pinnedId && !active ? 0.25 : 0.9;
+        ctx.drawImage(buf, 0, 0, w, h, minX, minY, w, h);
+        ctx.restore();
+      }
 
       ctx.save();
-      ctx.globalAlpha = pinnedId && !active ? 0.06 : 0.14;
-      ctx.fillStyle = active ? textColor : color;
-      ctx.fill(path, "nonzero");
-
-      ctx.globalAlpha = pinnedId && !active ? 0.15 : 1;
-      ctx.setLineDash([5, 4]);
-      ctx.lineWidth = active ? 2 : 1.3;
-      ctx.strokeStyle = active ? textColor : color;
-      pts.forEach((p) => {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, MEMBER_R, 0, Math.PI * 2);
-        ctx.stroke();
-      });
-      ctx.setLineDash([]);
-
-      ctx.fillStyle = active ? textColor : color;
+      ctx.globalAlpha = pinnedId && !active ? 0.25 : 1;
+      ctx.fillStyle = fillColor;
       ctx.font = "12px system-ui, -apple-system, sans-serif";
       ctx.textAlign = "center";
-      const labelY = Math.min(...pts.map((p) => p.y)) - MEMBER_R - 8;
+      const labelY = Math.min(...pts.map((p) => p.y)) - MEMBER_R - ringW - 8;
       ctx.fillText(tm.point.nom || "Réunion d'équipe", cx, labelY);
       ctx.restore();
     });
