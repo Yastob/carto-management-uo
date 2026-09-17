@@ -418,6 +418,14 @@ main {
   white-space: nowrap;
 }
 
+/* Champ de saisie texte vide : fond teinté + bordure marquée, pour qu'il ne se
+   confonde pas avec un champ en lecture seule (ex. compte de référence non rempli). */
+.field-empty {
+  background: color-mix(in srgb, var(--status-warning) 14%, var(--surface-1)) !important;
+  border-color: color-mix(in srgb, var(--status-warning) 55%, var(--gridline)) !important;
+}
+.field-empty::placeholder { color: var(--text-secondary); }
+
 .chip-list {
   display: flex;
   flex-wrap: wrap;

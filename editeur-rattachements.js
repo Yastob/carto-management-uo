@@ -361,7 +361,7 @@
         <td>${smLabel}</td>
         <td><select data-id="${c.id}" data-field="manager_id">${mgrOptions}</select></td>
         <td><select data-id="${c.id}" data-field="chef_de_projet_id">${cpOptions}</select></td>
-        <td><input type="text" data-id="${c.id}" data-field="compte_reference" value="${r.compte_reference}" style="width:100%;padding:5px 7px;border:1px solid var(--gridline);border-radius:6px;background:var(--surface-1);color:var(--text-primary)"></td>
+        <td><input type="text" data-id="${c.id}" data-field="compte_reference" value="${r.compte_reference}" placeholder="À renseigner" class="${r.compte_reference ? "" : "field-empty"}" style="width:100%;padding:5px 7px;border:1px solid var(--gridline);border-radius:6px;background:var(--surface-1);color:var(--text-primary)"></td>
         <td>
           <label class="checkbox-row"><input type="checkbox" data-id="${c.id}" data-field="tag_haut_potentiel" ${r.tag_haut_potentiel ? "checked" : ""} ${hpDisabled ? "disabled" : ""}> Haut potentiel</label>
           <label class="checkbox-row"><input type="checkbox" data-id="${c.id}" data-field="tag_en_fragilite" ${r.tag_en_fragilite ? "checked" : ""} ${otherTagsDisabled ? "disabled" : ""}> En fragilité</label>
@@ -380,6 +380,11 @@
         const r = getRattach(id);
         if (e.target.type === "checkbox") r[field] = e.target.checked;
         else r[field] = e.target.value;
+      });
+    });
+    els.tableBody.querySelectorAll('[data-field="compte_reference"]').forEach((el) => {
+      el.addEventListener("input", (e) => {
+        e.target.classList.toggle("field-empty", !e.target.value.trim());
       });
     });
   }
