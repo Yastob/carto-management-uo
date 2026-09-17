@@ -64,6 +64,9 @@
     search: document.getElementById("search"),
     toggleRattachements: document.getElementById("toggle-rattachements"),
     togglePoints: document.getElementById("toggle-points"),
+    pointsTypeFilters: document.getElementById("points-type-filters"),
+    togglePointsIndividuel: document.getElementById("toggle-points-individuel"),
+    togglePointsEquipe: document.getElementById("toggle-points-equipe"),
     filterCompte: document.getElementById("filter-compte"),
     filterSmViz: document.getElementById("filter-sm-viz"),
     stats: document.getElementById("stats"),
@@ -252,8 +255,18 @@
     els.stepUpload.style.display = "block";
   });
 
+  function updatePointsTypeFiltersVisibility() {
+    els.pointsTypeFilters.style.display = els.togglePoints.checked ? "flex" : "none";
+  }
+  updatePointsTypeFiltersVisibility();
+
   els.toggleRattachements.addEventListener("change", rebuildGraph);
-  els.togglePoints.addEventListener("change", rebuildGraph);
+  els.togglePoints.addEventListener("change", () => {
+    updatePointsTypeFiltersVisibility();
+    rebuildGraph();
+  });
+  els.togglePointsIndividuel.addEventListener("change", rebuildGraph);
+  els.togglePointsEquipe.addEventListener("change", rebuildGraph);
   els.filterCompte.addEventListener("change", rebuildGraph);
   els.filterSmViz.addEventListener("change", rebuildGraph);
   els.search.addEventListener("input", onSearch);
@@ -327,7 +340,7 @@
           .split(",")
           .map((s) => s.trim())
           .filter(Boolean),
-        type: norm(r.type) || "Autre",
+        type: norm(r.type) || "Individuel",
         periodicite: norm(r.periodicite) || "Non précisée",
         ordre_du_jour: norm(r.ordre_du_jour),
         date_maj: norm(r.date_maj),
@@ -395,6 +408,8 @@
   function rebuildGraph() {
     const showRattachements = els.toggleRattachements.checked;
     const showPoints = els.togglePoints.checked;
+    const showPointsIndividuel = els.togglePointsIndividuel.checked;
+    const showPointsEquipe = els.togglePointsEquipe.checked;
     const filterCompte = els.filterCompte.value;
     const filterSm = els.filterSmViz.value;
     const hasFilter = !!(filterCompte || filterSm);
@@ -407,7 +422,9 @@
 
     const activeCollabs = state.collaborateurs;
     const activeById = new Map(activeCollabs.map((c) => [c.id, c]));
-    const activePoints = showPoints ? state.points : [];
+    const activePoints = showPoints
+      ? state.points.filter((p) => (p.type === "Individuel" ? showPointsIndividuel : showPointsEquipe))
+      : [];
 
     els.emptyState.style.display = state.collaborateurs.length === 0 ? "flex" : "none";
 
@@ -509,8 +526,8 @@
 
     // Les réunions n'ont plus de nœud dédié :
     // - Individuelle : un simple trait entre les 2 personnes reliées (animateur <-> collaborateur).
-    // - Équipe/Autre : un cercle en pointillé dessiné autour de ses membres (dans le cercle =
-    //   dans la réunion), recalculé à chaque frame pour suivre les nœuds (cf. drawTeamMeetingCircles).
+    // - Équipe : une forme organique dessinée autour de ses membres (dans la forme =
+    //   dans la réunion), recalculée à chaque frame pour suivre les nœuds (cf. drawTeamMeetingCircles).
     teamMeetingCircles = [];
     hautPotentielNodes = collabs
       .filter((c) => !contextualIds.has(c.id) && c.tags.includes("Haut potentiel"))

@@ -249,7 +249,7 @@ def build_points_workbook(rows=None):
                 c2.fill = INPUT_FILL
                 c2.font = NORMAL_FONT
 
-    dv_type = DataValidation(type="list", formula1='"Equipe,Individuel,Autre"', allow_blank=True)
+    dv_type = DataValidation(type="list", formula1='"Equipe,Individuel"', allow_blank=True)
     ws.add_data_validation(dv_type)
     dv_type.add(f"{_col(POINT_HEADERS,'type')}2:{_col(POINT_HEADERS,'type')}{last_row}")
 

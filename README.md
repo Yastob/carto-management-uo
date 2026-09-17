@@ -132,7 +132,9 @@ supprimant la ligne correspondante plutôt qu'en la désactivant.
   défaut)** : trait plein = Senior Manager (réel), pointillé = Manager, pointillé
   fin = Chef de projet. Masqués par défaut pour ne pas surcharger le graphe — à
   activer pour visualiser la ligne hiérarchique.
-- **Réunions (case à cocher "Afficher les réunions", cochée par défaut)** :
+- **Réunions (case à cocher "Afficher les réunions", cochée par défaut)** : 2
+  sous-cases "Individuelles" / "Équipe" (cochées par défaut, visibles seulement quand
+  la case principale est cochée) permettent de n'afficher qu'un seul type de réunion.
   - Réunion d'équipe → une seule forme organique lissée ("à main levée") entoure ses
     membres ; le nom de la réunion s'affiche au-dessus. Cette forme est recalculée à
     chaque frame à partir de la position réelle des membres — elle a un intérieur
