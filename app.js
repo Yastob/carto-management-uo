@@ -29,6 +29,7 @@
   let allEdgesDataset = null;
   let pinnedId = null;
   let hoveringNode = false;
+  let selectedIds = new Set(); // sélection multiple (Ctrl/Maj+clic), indépendante de pinnedId
   let teamMeetingCircles = []; // réunions non-individuelles : dessinées en cercle, pas en nœud
   let hoveredCircleId = null;
   let hautPotentielNodes = []; // {id, size} : pastille jaune toujours visible, en plus du survol
@@ -577,6 +578,7 @@
     pinnedId = null;
     hoveringNode = false;
     hoveredCircleId = null;
+    selectedIds = new Set();
     network.on("hoverNode", (params) => {
       hoveringNode = true;
       if (!pinnedId) onHoverNode(params.node);
@@ -592,13 +594,31 @@
       restorePinnedOrClear();
     });
     network.on("click", (params) => {
+      const srcEvent = params.event && params.event.srcEvent;
+      const isMulti = !!(srcEvent && (srcEvent.ctrlKey || srcEvent.metaKey || srcEvent.shiftKey));
+
       if (params.nodes.length) {
-        pinnedId = params.nodes[0];
+        const nodeId = params.nodes[0];
+        if (isMulti) {
+          // Un pin simple en cours devient le premier élément de la sélection multiple :
+          // Ctrl/Maj+clic sur un 2e nœud construit naturellement un groupe de 2.
+          if (pinnedId && !pinnedId.startsWith("circle:")) selectedIds.add(pinnedId);
+          pinnedId = null;
+          if (selectedIds.has(nodeId)) selectedIds.delete(nodeId);
+          else selectedIds.add(nodeId);
+          if (selectedIds.size) highlightSelection();
+          else clearHighlight();
+          return;
+        }
+        selectedIds = new Set();
+        pinnedId = nodeId;
         onHoverNode(pinnedId);
         const connected = network.getConnectedNodes(pinnedId);
         network.fit({ nodes: [pinnedId, ...connected], animation: { duration: 400 } });
         return;
       }
+      if (isMulti) return; // Ctrl/Maj+clic sur le vide : ne modifie pas la sélection en cours
+      selectedIds = new Set();
       const hitCircle = findCircleAt(params.pointer.canvas);
       if (hitCircle) {
         pinnedId = "circle:" + hitCircle.id;
@@ -805,8 +825,25 @@
     positionTooltipAtMouse();
   }
 
+  // Sélection multiple (Ctrl/Maj+clic) : chaque nœud sélectionné garde sa propre
+  // "surbrillance" (lui + ses connexions), comme un clic simple mais cumulé.
+  function highlightSelection() {
+    const nodeIds = new Set(selectedIds);
+    const edgeIds = new Set();
+    selectedIds.forEach((id) => {
+      network.getConnectedNodes(id).forEach((n) => nodeIds.add(n));
+      network.getConnectedEdges(id).forEach((e) => edgeIds.add(e));
+    });
+    highlight([...nodeIds], [...edgeIds]);
+    hideTooltip();
+  }
+
   function restorePinnedOrClear() {
     if (!pinnedId) {
+      if (selectedIds.size) {
+        highlightSelection();
+        return;
+      }
       clearHighlight();
       return;
     }
