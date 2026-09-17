@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Éditeur — Réunions</title>
+<script src="access-gate.js"></script>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="shared-state.js"></script>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Éditeur — Réunions</h1>
+    <nav class="nav-links">
+      <div class="nav-group">
+        <span class="nav-group-label">Paramétrage</span>
+        <a href="editeur-rattachements.html">Rattachements</a>
+        <a href="editeur-points.html" class="current">Réunions</a>
+      </div>
+      <div class="nav-sep"></div>
+      <a href="index.html">Visualisation</a>
+    </nav>
+  </header>
+  <main class="editor-main">
+
+    <section id="step-upload" class="panel">
+      <h2>Étape 1 — Charger les fichiers</h2>
+
+      <div class="upload-step" id="step-collab">
+        <div class="upload-step-head">
+          <span class="step-badge">1</span>
+          <strong>Collaborateurs</strong>
+          <span class="tag-mandatory">Obligatoire</span>
+        </div>
+        <label class="dropzone" id="dz-collab">
+          <strong>Glisse-dépose</strong> collaborateurs.xlsx ici, ou clique pour choisir
+          <input type="file" id="file-collab" accept=".xlsx">
+        </label>
+        <div class="loaded-row" id="loaded-collab" style="display:none">
+          <span class="ok-icon">✓</span>
+          <span class="loaded-name" id="loaded-collab-name"></span>
+          <button class="btn btn-secondary btn-small" id="btn-change-collab">Changer de fichier</button>
+        </div>
+      </div>
+
+      <div class="upload-step" id="step-rattach">
+        <div class="upload-step-head">
+          <span class="step-badge">2</span>
+          <strong>Rattachements</strong>
+          <span class="tag-optional">Facultatif — pour détecter les nouveaux/disparus par périmètre</span>
+        </div>
+        <div id="rattach-choice">
+          <label class="dropzone" id="dz-rattach">
+            <strong>Glisse-dépose</strong> rattachements.xlsx ici, ou clique pour choisir
+            <input type="file" id="file-rattach" accept=".xlsx">
+          </label>
+          <button class="btn btn-secondary btn-small" id="btn-skip-rattach">Ignorer cette étape</button>
+        </div>
+        <div class="loaded-row" id="loaded-rattach" style="display:none">
+          <span class="ok-icon">✓</span>
+          <span class="loaded-name" id="loaded-rattach-name"></span>
+          <button class="btn btn-secondary btn-small" id="btn-change-rattach">Changer de fichier</button>
+        </div>
+      </div>
+
+      <div class="upload-step" id="step-points">
+        <div class="upload-step-head">
+          <span class="step-badge">3</span>
+          <strong>Réunions existantes</strong>
+          <span class="tag-optional">Facultatif — pour continuer une saisie déjà commencée</span>
+        </div>
+        <div id="points-choice">
+          <label class="dropzone" id="dz-points">
+            <strong>Glisse-dépose</strong> reunions.xlsx ici, ou clique pour choisir
+            <input type="file" id="file-points" accept=".xlsx">
+          </label>
+          <button class="btn btn-secondary btn-small" id="btn-skip-points">Ignorer cette étape</button>
+        </div>
+        <div class="loaded-row" id="loaded-points" style="display:none">
+          <span class="ok-icon">✓</span>
+          <span class="loaded-name" id="loaded-points-name"></span>
+          <button class="btn btn-secondary btn-small" id="btn-change-points">Changer de fichier</button>
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <span></span>
+        <button class="btn btn-primary" id="btn-continue" disabled>Continuer →</button>
+      </div>
+    </section>
+
+    <section id="step-edit" style="display:none">
+      <div class="step-actions">
+        <button class="btn btn-secondary btn-small" id="btn-back">← Revenir aux fichiers</button>
+        <div id="perimeter-wrap" style="display:none">
+          <select id="filter-sm" style="padding:7px 10px;border:1px solid var(--gridline);border-radius:6px;font-size:13px;background:var(--surface-1);color:var(--text-primary)">
+            <option value="">Tous les périmètres</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel" id="recap-panel" style="display:none">
+        <h2 style="margin-bottom:10px">Écarts détectés pour ce périmètre</h2>
+        <div id="recap-content"></div>
+      </div>
+
+      <div class="panel">
+        <h2 id="form-title">Ajouter une réunion</h2>
+        <div class="muted-note" style="margin-bottom:12px">* champ obligatoire</div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Type *</label>
+            <select id="f-type">
+              <option value="Individuel">Individuel</option>
+              <option value="Equipe">Equipe</option>
+              <option value="Autre">Autre</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Périodicité *</label>
+            <select id="f-periodicite">
+              <option>Hebdomadaire</option>
+              <option>2 fois par mois</option>
+              <option>Mensuel</option>
+              <option>Tous les 2 mois</option>
+              <option>Ponctuel</option>
+              <option>Autre</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="individuel-fields">
+          <div class="field-row">
+            <div class="field">
+              <label>Animateur *</label>
+              <select id="f-chef"></select>
+            </div>
+            <div class="field">
+              <label>Collaborateur *</label>
+              <select id="f-collaborateur"></select>
+            </div>
+          </div>
+        </div>
+
+        <div id="groupe-fields" style="display:none">
+          <div class="field">
+            <label>Animateur</label>
+            <select id="f-animateur"></select>
+          </div>
+          <div class="field">
+            <label>Participants</label>
+            <input type="text" id="f-participants-search" placeholder="Filtrer la liste par nom...">
+            <div class="check-list" id="f-participants" style="margin-top:6px"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Nom de la réunion</label>
+          <input type="text" id="f-nom" placeholder="Ex : Réunion d'équipe Data (facultatif)">
+        </div>
+        <div class="field">
+          <label>Ordre du jour</label>
+          <textarea id="f-odj" placeholder="Ex : avancement missions, alertes... (facultatif)"></textarea>
+        </div>
+        <label class="checkbox-row"><input type="checkbox" id="f-actif" checked> Réunion active</label>
+        <div class="step-actions">
+          <button class="btn btn-secondary" id="btn-cancel-edit" style="display:none">Annuler la modification</button>
+          <button class="btn btn-primary" id="btn-add">Ajouter la réunion</button>
+        </div>
+      </div>
+
+      <div class="panel" id="uncovered-panel">
+        <h2 style="margin-bottom:6px">Collaborateurs sans réunion (<span id="count-uncovered">0</span>)</h2>
+        <div class="muted-note" style="margin-bottom:10px">
+          Personne ne les retrouve pour l'instant dans une réunion (individuelle ou d'équipe) active.
+          Clique sur un nom pour préremplir une réunion individuelle avec lui.
+        </div>
+        <div id="uncovered-list" class="chip-list"></div>
+      </div>
+
+      <div class="actions-bar">
+        <h2 style="margin:0">Réunions créées (<span id="count-points">0</span>)</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Nom</th><th>Type</th><th>Périodicité</th><th>Animateur</th><th>Participants</th><th>Active</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+      <div class="step-actions">
+        <span></span>
+        <button class="btn btn-primary" id="btn-download">Télécharger reunions.xlsx</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+<script src="editeur-points.js"></script>
+</body>
+</html>

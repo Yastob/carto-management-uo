@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Cartographie management UO</title>
+<script src="access-gate.js"></script>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/dist/vis-network.min.js"></script>
+<script src="shared-state.js"></script>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Cartographie management UO</h1>
+    <nav class="nav-links">
+      <div class="nav-group">
+        <span class="nav-group-label">Paramétrage</span>
+        <a href="editeur-rattachements.html">Rattachements</a>
+        <a href="editeur-points.html">Réunions</a>
+      </div>
+      <div class="nav-sep"></div>
+      <a href="index.html" class="current">Visualisation</a>
+    </nav>
+  </header>
+
+  <section id="step-upload" class="editor-main">
+    <div class="panel">
+      <h2>Étape 1 — Charger les fichiers</h2>
+
+      <div class="upload-step" id="step-collab">
+        <div class="upload-step-head">
+          <span class="step-badge">1</span>
+          <strong>Collaborateurs</strong>
+          <span class="tag-mandatory">Obligatoire</span>
+        </div>
+        <label class="dropzone" id="dz-collab">
+          <strong>Glisse-dépose</strong> collaborateurs.xlsx ici, ou clique pour choisir
+          <input type="file" id="file-collab" accept=".xlsx">
+        </label>
+        <div class="loaded-row" id="loaded-collab" style="display:none">
+          <span class="ok-icon">✓</span>
+          <span class="loaded-name" id="loaded-collab-name"></span>
+          <button class="btn btn-secondary btn-small" id="btn-change-collab">Changer de fichier</button>
+        </div>
+      </div>
+
+      <div class="upload-step" id="step-rattach">
+        <div class="upload-step-head">
+          <span class="step-badge">2</span>
+          <strong>Rattachements</strong>
+          <span class="tag-optional">Facultatif — ajoute Manager/CP, compte de référence, tags</span>
+        </div>
+        <div id="rattach-choice">
+          <label class="dropzone" id="dz-rattach">
+            <strong>Glisse-dépose</strong> rattachements.xlsx ici, ou clique pour choisir
+            <input type="file" id="file-rattach" accept=".xlsx">
+          </label>
+          <button class="btn btn-secondary btn-small" id="btn-skip-rattach">Ignorer ce fichier</button>
+        </div>
+        <div class="loaded-row" id="loaded-rattach" style="display:none">
+          <span class="ok-icon">✓</span>
+          <span class="loaded-name" id="loaded-rattach-name"></span>
+          <button class="btn btn-secondary btn-small" id="btn-change-rattach">Changer de fichier</button>
+        </div>
+      </div>
+
+      <div class="upload-step" id="step-points">
+        <div class="upload-step-head">
+          <span class="step-badge">3</span>
+          <strong>Réunions</strong>
+          <span class="tag-optional">Facultatif — ajoute les réunions de management</span>
+        </div>
+        <div id="points-choice">
+          <label class="dropzone" id="dz-points">
+            <strong>Glisse-dépose</strong> reunions.xlsx ici, ou clique pour choisir
+            <input type="file" id="file-points" accept=".xlsx">
+          </label>
+          <button class="btn btn-secondary btn-small" id="btn-skip-points">Ignorer ce fichier</button>
+        </div>
+        <div class="loaded-row" id="loaded-points" style="display:none">
+          <span class="ok-icon">✓</span>
+          <span class="loaded-name" id="loaded-points-name"></span>
+          <button class="btn btn-secondary btn-small" id="btn-change-points">Changer de fichier</button>
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <div class="muted-note" id="continue-hint">Charge le fichier Collaborateurs pour continuer.</div>
+        <button class="btn btn-primary" id="btn-continue" disabled>Voir la cartographie →</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="step-viz" style="display:none; flex:1; flex-direction:column; min-height:0">
+    <header>
+      <button class="btn btn-secondary btn-small" id="btn-back">← Modifier les fichiers</button>
+      <input type="text" id="search" placeholder="Rechercher un collaborateur ou une réunion..." disabled>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-inactive"> Afficher les inactifs
+      </label>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-rattachements"> Afficher les rattachements
+      </label>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-points" checked> Afficher les réunions
+      </label>
+      <select id="filter-compte" style="padding:6px 9px;border:1px solid var(--gridline);border-radius:6px;font-size:12.5px;background:var(--surface-1);color:var(--text-primary)">
+        <option value="">Tous les comptes</option>
+      </select>
+      <select id="filter-sm-viz" style="padding:6px 9px;border:1px solid var(--gridline);border-radius:6px;font-size:12.5px;background:var(--surface-1);color:var(--text-primary)">
+        <option value="">Tous les périmètres</option>
+      </select>
+      <span id="stats"></span>
+    </header>
+    <main>
+      <div id="network"></div>
+      <div id="empty-state">
+        <strong>Aucune donnée chargée</strong>
+        <span>Reviens à l'étape précédente pour charger tes fichiers.</span>
+      </div>
+      <div id="legend">
+        <h2>Rôle (couleur)</h2>
+        <div class="legend-row"><span class="legend-swatch" style="background:var(--node-person-sm)"></span> Senior Manager</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:var(--node-person-manager)"></span> Manager</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:var(--node-person-cp)"></span> Chef de projet / Directeur de projet</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:var(--node-person)"></span> Consultant</div>
+        <h2>Alerte (toujours visible)</h2>
+        <div class="legend-row"><span class="legend-swatch" style="background:var(--node-person); border:3px solid var(--ring-fragile)"></span> En fragilité</div>
+        <div class="legend-row">⚠ = aucune réunion commune avec un responsable (SM/Manager/CP)</div>
+        <h2>Liens d'encadrement (case à cocher)</h2>
+        <div class="legend-row"><span class="legend-line" style="border-color:var(--edge-hierarchy)"></span> Senior Manager (réel)</div>
+        <div class="legend-row"><span class="legend-line dashed" style="border-color:var(--edge-hierarchy)"></span> Manager</div>
+        <div class="legend-row"><span class="legend-line dotted" style="border-color:var(--edge-hierarchy)"></span> Chef de projet</div>
+        <h2>Réunions</h2>
+        <div class="legend-row"><span class="legend-circle" style="border-color:var(--edge-anim)"></span> Réunion d'équipe (dans le cercle = dans la réunion)</div>
+        <div class="legend-row"><span class="legend-line" style="border-color:var(--edge-anim)"></span> Réunion individuelle (entre les 2 personnes reliées)</div>
+        <h2>Filtres (Compte / SM)</h2>
+        <div class="legend-row"><span class="legend-swatch" style="background:var(--node-person-inactive)"></span> Hors filtre, affiché car présent dans une réunion filtrée</div>
+        <h2>Tags (au survol)</h2>
+        <div class="legend-row"><span class="pill" style="background:var(--status-warning); color:#000">Haut potentiel</span></div>
+        <div class="legend-row"><span class="pill" style="background:var(--slot-magenta)">Consultant isolé</span></div>
+        <h2>Astuce</h2>
+        <div style="line-height:1.5">Survole un nœud pour un aperçu. Clique dessus pour l'épingler, zoomer sur son entourage et estomper le reste. Clique dans le vide pour réinitialiser la vue.</div>
+      </div>
+    </main>
+    <div id="tooltip"></div>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

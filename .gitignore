@@ -1,0 +1,11 @@
+# Données réelles de l'UO — jamais publiées (repo public). Chacun garde les siennes en local.
+data/*
+!data/.gitkeep
+
+# Config locale de dev (chemins Windows personnels)
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+

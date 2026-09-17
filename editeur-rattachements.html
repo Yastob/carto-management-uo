@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Éditeur — Rattachements</title>
+<script src="access-gate.js"></script>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="shared-state.js"></script>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Éditeur — Rattachements</h1>
+    <nav class="nav-links">
+      <div class="nav-group">
+        <span class="nav-group-label">Paramétrage</span>
+        <a href="editeur-rattachements.html" class="current">Rattachements</a>
+        <a href="editeur-points.html">Réunions</a>
+      </div>
+      <div class="nav-sep"></div>
+      <a href="index.html">Visualisation</a>
+    </nav>
+  </header>
+  <main class="editor-main">
+
+    <section id="step-upload" class="panel">
+      <h2>Étape 1 — Charger les fichiers</h2>
+
+      <div class="upload-step" id="step-collab">
+        <div class="upload-step-head">
+          <span class="step-badge">1</span>
+          <strong>Collaborateurs</strong>
+          <span class="tag-mandatory">Obligatoire</span>
+        </div>
+        <label class="dropzone" id="dz-collab">
+          <strong>Glisse-dépose</strong> collaborateurs.xlsx ici, ou clique pour choisir
+          <input type="file" id="file-collab" accept=".xlsx">
+        </label>
+        <div class="loaded-row" id="loaded-collab" style="display:none">
+          <span class="ok-icon">✓</span>
+          <span class="loaded-name" id="loaded-collab-name"></span>
+          <button class="btn btn-secondary btn-small" id="btn-change-collab">Changer de fichier</button>
+        </div>
+      </div>
+
+      <div class="upload-step" id="step-rattach">
+        <div class="upload-step-head">
+          <span class="step-badge">2</span>
+          <strong>Rattachements existant</strong>
+          <span class="tag-optional">Facultatif — pour continuer une saisie déjà commencée</span>
+        </div>
+        <div id="rattach-choice">
+          <label class="dropzone" id="dz-rattach">
+            <strong>Glisse-dépose</strong> rattachements.xlsx ici, ou clique pour choisir
+            <input type="file" id="file-rattach" accept=".xlsx">
+          </label>
+          <button class="btn btn-secondary btn-small" id="btn-skip-rattach">Ignorer cette étape</button>
+        </div>
+        <div class="loaded-row" id="loaded-rattach" style="display:none">
+          <span class="ok-icon">✓</span>
+          <span class="loaded-name" id="loaded-rattach-name"></span>
+          <button class="btn btn-secondary btn-small" id="btn-change-rattach">Changer de fichier</button>
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <span></span>
+        <button class="btn btn-primary" id="btn-continue" disabled>Continuer →</button>
+      </div>
+    </section>
+
+    <section id="step-edit" style="display:none">
+      <div class="step-actions">
+        <button class="btn btn-secondary btn-small" id="btn-back">← Revenir aux fichiers</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select id="filter-sm" style="padding:7px 10px;border:1px solid var(--gridline);border-radius:6px;font-size:13px;background:var(--surface-1);color:var(--text-primary)">
+            <option value="">Tous les périmètres</option>
+          </select>
+          <input type="text" id="search" placeholder="Filtrer par nom..." style="max-width:260px;padding:7px 10px;border:1px solid var(--gridline);border-radius:6px;font-size:13px;background:var(--surface-1);color:var(--text-primary)">
+        </div>
+      </div>
+      <div class="muted-note" id="rules-note" style="margin-bottom:12px">
+        Le Senior Manager (colonne informative ci-dessous) vient de collaborateurs.xlsx —
+        modifie-le dans ce fichier, pas ici. Règles appliquées automatiquement : aucun tag
+        pour un Senior Manager ; le tag "Haut potentiel" n'est proposé qu'aux Consultants ;
+        un Manager/CP hors de cette UO se choisit via "Sectoriel" dans la liste. Le filtre
+        de périmètre n'affecte que l'affichage : le fichier téléchargé contient toujours
+        tout le monde. Les nouveaux collaborateurs (absents de rattachements.xlsx chargé)
+        apparaissent en premier.
+      </div>
+      <div class="panel" id="recap-panel" style="display:none">
+        <h2 style="margin-bottom:10px">Écarts détectés pour ce périmètre</h2>
+        <div id="recap-content"></div>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" id="table">
+          <thead>
+            <tr>
+              <th>Collaborateur</th>
+              <th>Senior Manager</th>
+              <th>Manager</th>
+              <th>Chef de projet</th>
+              <th>Compte de référence</th>
+              <th>Tags</th>
+              <th>Actif</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+      <div class="step-actions">
+        <span></span>
+        <button class="btn btn-primary" id="btn-download">Télécharger rattachements.xlsx</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+<script src="editeur-rattachements.js"></script>
+</body>
+</html>
