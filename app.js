@@ -154,7 +154,7 @@
   wireDropzone(els.dzCollab, els.fileCollab, async (file) => {
     try {
       const wb = await readWorkbook(file);
-      const rows = sheetToRows(wb, "Collaborateurs");
+      const rows = CartoXlsx.readCollaborateurs(wb);
       CartoState.save("collab", rows);
       applyCollabRows(rows, file.name);
     } catch (err) {

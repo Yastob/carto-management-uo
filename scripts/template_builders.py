@@ -30,8 +30,8 @@ N_POINT_ROWS = 100    # capacité Points (lignes 2..101)
 
 POSTES = ["Senior Manager", "Manager", "Chef de projet", "Directeur de projet", "Consultant"]
 
-COLLAB_HEADERS = ["id", "id_suggestion", "doublon_id", "nom", "prenom", "poste", "senior_manager_id"]
-COLLAB_WIDTHS = [8, 13, 11, 18, 18, 18, 16]
+COLLAB_HEADERS = ["id", "nom", "prenom", "poste", "senior_manager_id", "id_suggestion", "doublon_id"]
+COLLAB_WIDTHS = [8, 18, 18, 18, 16, 13, 11]
 
 RATTACH_HEADERS = [
     "id", "manager_id", "chef_de_projet_id", "compte_reference",

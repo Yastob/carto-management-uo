@@ -94,12 +94,21 @@ avec des exemples — sauvegarde tes données avant si besoin.
 
 ## Structure des données
 
-- **collaborateurs.xlsx** → onglet Collaborateurs : `id, nom, prenom, poste,
-  senior_manager_id` (poste ∈ Senior Manager / Manager / Chef de projet / Directeur
-  de projet / Consultant). Colonnes d'aide `id_suggestion` (prochain id libre) et
-  `doublon_id` (alerte si id dupliqué).
+- **collaborateurs.xlsx** — lecture **flexible** : c'est le seul fichier saisi à la
+  main, donc ni le nom de l'onglet ni le texte des en-têtes de colonnes ne comptent.
+  Seul l'**ordre** des colonnes est vérifié : la 1ère ligne est toujours traitée comme
+  un en-tête (son contenu est ignoré), et les 5 premières colonnes de données doivent
+  être, dans cet ordre : `id, nom, prenom, poste, senior_manager_id` (poste ∈ Senior
+  Manager / Manager / Chef de projet / Directeur de projet / Consultant). Les colonnes
+  suivantes sont ignorées (ex. les colonnes d'aide `id_suggestion` / `doublon_id` du
+  gabarit, utiles seulement dans Excel). Un onglet nommé "Lisez-moi" ou "Listes" est
+  automatiquement sauté si présent (cas du gabarit généré ci-dessous) ; sinon, c'est le
+  premier onglet du fichier qui est lu.
   - `senior_manager_id` : le vrai responsable hiérarchique (RH), quasi toujours
     renseigné sauf pour un Senior Manager lui-même.
+  - Un fichier construit avec l'ancien gabarit (`id, id_suggestion, doublon_id, nom,
+    prenom, poste, senior_manager_id`) doit être réordonné une fois : `python
+    scripts/migrate_collab_column_order.py chemin/vers/collaborateurs.xlsx`.
 - **rattachements.xlsx** → onglet Rattachements : `id, manager_id,
   chef_de_projet_id, compte_reference, tag_haut_potentiel, tag_en_fragilite,
   tag_consultant_isole, actif, date_maj`.

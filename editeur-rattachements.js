@@ -122,7 +122,7 @@
   wireDropzone(els.dzCollab, els.fileCollab, async (file) => {
     try {
       const wb = await readWorkbook(file);
-      const rows = sheetRows(wb, "Collaborateurs");
+      const rows = CartoXlsx.readCollaborateurs(wb);
       // La version qu'on est en train de remplacer devient la photo "précédente"
       // (via CartoState.save, qui fait la rotation), utilisée pour détecter les départs.
       CartoState.save("collab", rows);

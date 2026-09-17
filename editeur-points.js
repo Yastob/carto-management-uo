@@ -18,6 +18,7 @@
   let points = []; // {id, nom, animateur_id, participants: Set<id>, type, periodicite, ordre_du_jour, actif}
   let editingId = null;
   let lastAnimateurId = ""; // repris par défaut pour la prochaine réunion ajoutée
+  let lastPeriodicite = "Hebdomadaire"; // idem pour la périodicité
   let perimeter = ""; // id d'un SM, "__non_assigne__", ou "" (tous)
 
   const els = {
@@ -138,7 +139,7 @@
   wireDropzone(els.dzCollab, els.fileCollab, async (file) => {
     try {
       const wb = await readWorkbook(file);
-      const rows = sheetRows(wb, "Collaborateurs");
+      const rows = CartoXlsx.readCollaborateurs(wb);
       CartoState.save("collab", rows);
       applyCollabRows(rows, file.name);
     } catch (err) {
@@ -357,7 +358,7 @@
     els.btnAdd.textContent = "Ajouter la réunion";
     els.btnCancelEdit.style.display = "none";
     els.fType.value = "Individuel";
-    els.fPeriodicite.value = "Hebdomadaire";
+    els.fPeriodicite.value = lastPeriodicite;
     els.fChef.value = lastAnimateurId;
     els.fCollaborateur.value = "";
     els.fAnimateur.value = lastAnimateurId;
@@ -422,6 +423,7 @@
       actif: els.fActif.checked,
     };
     lastAnimateurId = animateur_id || lastAnimateurId;
+    lastPeriodicite = data.periodicite || lastPeriodicite;
     if (editingId) {
       const idx = points.findIndex((p) => p.id === editingId);
       points[idx] = data;
