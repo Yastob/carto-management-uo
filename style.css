@@ -223,6 +223,12 @@ main {
   color: var(--text-secondary);
   overflow-y: auto;
 }
+.legend-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--slot-violet);
+  margin: 0 0 12px;
+}
 #legend h2 {
   font-size: 11px;
   text-transform: uppercase;
@@ -327,7 +333,16 @@ main {
   white-space: nowrap;
 }
 .nav-links a:hover { background: var(--gridline); }
-.nav-links a.current { color: var(--slot-violet); background: var(--gridline); }
+.nav-links a.current { background: var(--gridline); }
+/* Hiérarchie visuelle des 2 niveaux de navigation, par couleur mc2i : rose pour les
+   2 "portes d'entrée" (Paramétrage / Visualisation), bleu marine pour les 2 pages de
+   paramétrage qu'on choisit une fois dedans (Rattachements / Réunions). */
+.nav-links > a {
+  color: var(--slot-magenta);
+}
+.nav-group a {
+  color: var(--slot-violet);
+}
 
 /* ---------- Éditeurs (rattachements / points) ---------- */
 .editor-main {
@@ -550,7 +565,8 @@ main {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: .04em;
-  color: var(--text-muted);
+  color: var(--slot-magenta);
+  font-weight: 700;
   padding: 0 6px 0 2px;
   white-space: nowrap;
 }

@@ -198,3 +198,7 @@ isolé", rôle Chef de projet) repris de la présentation corporate mc2i officie
 Les variantes utilisées en thème sombre sont ces mêmes teintes éclaircies pour rester
 lisibles sur fond quasi noir (le book ne définit pas de mode sombre). Police : Lato
 (chargée depuis Google Fonts), utilisée partout dans les 3 pages.
+
+La navigation en haut distingue par la couleur ses 2 niveaux : rose pour les 2 "portes
+d'entrée" (Paramétrage / Visualisation), bleu marine pour les 2 pages de paramétrage
+(Rattachements / Réunions) qu'on choisit une fois dans Paramétrage.
