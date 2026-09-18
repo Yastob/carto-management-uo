@@ -82,33 +82,47 @@
   </section>
 
   <div id="step-viz" style="display:none; flex:1; flex-direction:column; min-height:0">
-    <header>
-      <button class="btn btn-secondary btn-small" id="btn-back">← Modifier les fichiers</button>
-      <input type="text" id="search" placeholder="Rechercher un collaborateur ou une réunion..." disabled>
-      <label class="toggle">
-        <input type="checkbox" id="toggle-rattachements"> Afficher les rattachements
-      </label>
-      <label class="toggle">
-        <input type="checkbox" id="toggle-points" checked> Afficher les réunions
-      </label>
-      <span id="points-type-filters" style="display:flex;gap:8px">
-        <label class="toggle" style="font-size:12px">
-          <input type="checkbox" id="toggle-points-individuel" checked> Individuelles
-        </label>
-        <label class="toggle" style="font-size:12px">
-          <input type="checkbox" id="toggle-points-equipe" checked> Équipe
-        </label>
-      </span>
-      <label class="toggle">
-        <input type="checkbox" id="toggle-periodicite"> Colorer par périodicité
-      </label>
-      <select id="filter-compte" style="padding:6px 9px;border:1px solid var(--gridline);border-radius:6px;font-size:12.5px;background:var(--surface-1);color:var(--text-primary)">
-        <option value="">Tous les comptes</option>
-      </select>
-      <select id="filter-sm-viz" style="padding:6px 9px;border:1px solid var(--gridline);border-radius:6px;font-size:12.5px;background:var(--surface-1);color:var(--text-primary)">
-        <option value="">Tous les périmètres</option>
-      </select>
-      <span id="stats"></span>
+    <header id="viz-toolbar">
+      <div class="header-row">
+        <button class="btn btn-secondary btn-small" id="btn-back">← Modifier les fichiers</button>
+        <input type="text" id="search" placeholder="Rechercher un collaborateur ou une réunion..." disabled>
+        <div class="header-group">
+          <span class="header-group-label">Filtres</span>
+          <select id="filter-compte" style="padding:6px 9px;border:1px solid var(--gridline);border-radius:6px;font-size:12.5px;background:var(--surface-1);color:var(--text-primary)">
+            <option value="">Tous les comptes</option>
+          </select>
+          <select id="filter-sm-viz" style="padding:6px 9px;border:1px solid var(--gridline);border-radius:6px;font-size:12.5px;background:var(--surface-1);color:var(--text-primary)">
+            <option value="">Tous les périmètres</option>
+          </select>
+        </div>
+        <span id="stats"></span>
+      </div>
+      <div class="header-row">
+        <div class="header-group">
+          <span class="header-group-label">Rattachements</span>
+          <label class="toggle">
+            <input type="checkbox" id="toggle-rattachements"> Afficher
+          </label>
+        </div>
+
+        <div class="header-group">
+          <span class="header-group-label">Réunions</span>
+          <label class="toggle">
+            <input type="checkbox" id="toggle-points" checked> Afficher
+          </label>
+          <span id="points-type-filters" style="display:flex;gap:8px">
+            <label class="toggle" style="font-size:12px">
+              <input type="checkbox" id="toggle-points-individuel" checked> Individuelles
+            </label>
+            <label class="toggle" style="font-size:12px">
+              <input type="checkbox" id="toggle-points-equipe" checked> Équipe
+            </label>
+          </span>
+          <label class="toggle">
+            <input type="checkbox" id="toggle-periodicite"> Colorer par périodicité
+          </label>
+        </div>
+      </div>
     </header>
     <main>
       <div id="network"></div>

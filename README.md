@@ -153,11 +153,15 @@ supprimant la ligne correspondante plutôt qu'en la désactivant.
   droite du nœud, toujours visible = tag "Haut potentiel". ⚠ en gras toujours visible
   = aucune réunion commune avec un responsable (SM/Manager/CP) — l'objectif final de
   l'outil. Le tag "Consultant isolé" reste visible uniquement au survol (info-bulle).
-- **Liens d'encadrement (case à cocher "Afficher les rattachements", décochée par
+L'en-tête de la Visualisation est organisé sur 2 niveaux : recherche + filtres
+(Compte/périmètre) en haut, puis les 2 zones "Rattachements" et "Réunions" juste
+en dessous, chacune avec sa case "Afficher" et ses réglages propres.
+
+- **Liens d'encadrement (zone "Rattachements" → case "Afficher", décochée par
   défaut)** : trait plein = Senior Manager (réel), pointillé = Manager, pointillé
   fin = Chef de projet. Masqués par défaut pour ne pas surcharger le graphe — à
   activer pour visualiser la ligne hiérarchique.
-- **Réunions (case à cocher "Afficher les réunions", cochée par défaut)** : 2
+- **Réunions (zone "Réunions" → case "Afficher", cochée par défaut)** : 2
   sous-cases "Individuelles" / "Équipe" (cochées par défaut, visibles seulement quand
   la case principale est cochée) permettent de n'afficher qu'un seul type de réunion.
   - Réunion d'équipe → une seule forme organique lissée ("à main levée") entoure ses
@@ -167,7 +171,7 @@ supprimant la ligne correspondante plutôt qu'en la désactivant.
     peut le faire apparaître visuellement dedans (sans conséquence sur les données).
   - Réunion individuelle → simple trait reliant l'animateur et le collaborateur (pas
     d'étiquette, pour éviter la répétition).
-- **Colorer par périodicité** (case à cocher, décochée par défaut) : recolore les
+- **Colorer par périodicité** (dans la zone "Réunions", décochée par défaut) : recolore les
   traits de réunion individuelle et les formes de réunion d'équipe selon leur
   périodicité, avec la palette Okabe-Ito (conçue pour rester distinguable en cas de
   daltonisme — sans paire rouge/vert) : bleu (Hebdomadaire), bleu ciel (2 fois par
