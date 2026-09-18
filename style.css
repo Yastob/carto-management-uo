@@ -92,19 +92,50 @@ html, body {
 header {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 10px 16px;
   background: var(--surface-1);
   border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
 }
 
-header h1 {
-  font-size: 15px;
+/* ---------- Navigation à 2 niveaux ---------- */
+.tabs-primary {
+  display: flex;
+}
+.tab-primary {
+  font-size: 16px;
   font-weight: 700;
-  margin: 0;
-  color: var(--slot-violet);
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 16px 20px;
+  border-bottom: 3px solid transparent;
   white-space: nowrap;
+}
+.tab-primary:hover { color: var(--slot-magenta); }
+.tab-primary.current {
+  color: var(--slot-magenta);
+  border-bottom-color: var(--slot-magenta);
+}
+
+.tabs-secondary {
+  display: flex;
+  gap: 4px;
+  padding: 7px 16px 7px 38px;
+  background: var(--page-plane);
+  border-bottom: 1px solid var(--border);
+}
+.tab-secondary {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 5px 12px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.tab-secondary:hover { background: var(--gridline); }
+.tab-secondary.current {
+  color: #fff;
+  background: var(--slot-violet);
 }
 
 .file-input-label {
@@ -153,6 +184,7 @@ header h1 {
   flex-direction: column;
   align-items: stretch;
   gap: 10px;
+  padding: 10px 16px;
 }
 .header-row {
   display: flex;
@@ -335,33 +367,6 @@ main {
 #tooltip .tt-list {
   margin: 2px 0 0;
   padding-left: 16px;
-}
-
-/* ---------- Navigation partagée entre les pages ---------- */
-.nav-links {
-  display: flex;
-  gap: 6px;
-  margin-left: 4px;
-}
-.nav-links a {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-decoration: none;
-  padding: 6px 10px;
-  border-radius: 6px;
-  white-space: nowrap;
-}
-.nav-links a:hover { background: var(--gridline); }
-.nav-links a.current { background: var(--gridline); }
-/* Hiérarchie visuelle des 2 niveaux de navigation, par couleur mc2i : rose pour les
-   2 "portes d'entrée" (Paramétrage / Visualisation), bleu marine pour les 2 pages de
-   paramétrage qu'on choisit une fois dedans (Rattachements / Réunions). */
-.nav-links > a {
-  color: var(--slot-magenta);
-}
-.nav-group a {
-  color: var(--slot-violet);
 }
 
 /* ---------- Éditeurs (rattachements / points) ---------- */
@@ -573,29 +578,6 @@ main {
   gap: 12px;
   margin-bottom: 10px;
   flex-wrap: wrap;
-}
-
-/* ---------- Navigation groupée (Paramétrage > Rattachements/Points | Visualisation) ---------- */
-.nav-group {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-.nav-group-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  color: var(--slot-magenta);
-  font-weight: 700;
-  padding: 0 6px 0 2px;
-  white-space: nowrap;
-}
-.nav-sep {
-  width: 1px;
-  height: 16px;
-  background: var(--border);
-  margin: 0 8px;
-  flex-shrink: 0;
 }
 
 /* ---------- Parcours en étapes (upload -> édition) ---------- */

@@ -15,17 +15,15 @@
 <body>
 <div id="app">
   <header>
-    <h1>Cartographie management UO</h1>
-    <nav class="nav-links">
-      <div class="nav-group">
-        <span class="nav-group-label">Paramétrage</span>
-        <a href="editeur-rattachements.html">Rattachements</a>
-        <a href="editeur-points.html" class="current">Réunions</a>
-      </div>
-      <div class="nav-sep"></div>
-      <a href="index.html">Visualisation</a>
+    <nav class="tabs-primary">
+      <a href="editeur-rattachements.html" class="tab-primary current">Paramétrage</a>
+      <a href="index.html" class="tab-primary">Visualisation</a>
     </nav>
   </header>
+  <nav class="tabs-secondary">
+    <a href="editeur-rattachements.html" class="tab-secondary">Rattachements</a>
+    <a href="editeur-points.html" class="tab-secondary current">Réunions</a>
+  </nav>
   <main class="editor-main">
 
     <section id="step-upload" class="panel">

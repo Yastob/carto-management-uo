@@ -199,6 +199,10 @@ Les variantes utilisées en thème sombre sont ces mêmes teintes éclaircies po
 lisibles sur fond quasi noir (le book ne définit pas de mode sombre). Police : Lato
 (chargée depuis Google Fonts), utilisée partout dans les 3 pages.
 
-La navigation en haut distingue par la couleur ses 2 niveaux : rose pour les 2 "portes
-d'entrée" (Paramétrage / Visualisation), bleu marine pour les 2 pages de paramétrage
-(Rattachements / Réunions) qu'on choisit une fois dans Paramétrage.
+La navigation en haut est à 2 niveaux, avec un vrai style d'onglets (plus de nom
+d'outil affiché, qui faisait doublon) :
+- Niveau 1 : "Paramétrage" / "Visualisation", en rose mc2i, l'onglet actif souligné.
+- Niveau 2 (affiché uniquement sur les 2 pages de paramétrage) : "Rattachements" /
+  "Réunions", en bleu marine mc2i, imbriqué juste sous "Paramétrage" pour montrer
+  qu'elles en dépendent. "Paramétrage" reste marqué actif tant qu'on est sur l'une
+  des deux, exactement comme "Visualisation" quand elle est sélectionnée.
