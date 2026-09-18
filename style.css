@@ -10,13 +10,17 @@
 
   --slot-blue:    #2a78d6;
   --slot-orange:  #eb6834;
-  --slot-violet:  #4a3aa7;
+  /* Bleu marine officiel mc2i (thème "mc2i final" de la présentation corporate,
+     valeur exacte accent6/lt2). Utilisé dans le book comme couleur d'identité
+     principale — repris ici pour le titre, les onglets actifs, les boutons. */
+  --slot-violet:  #170B8F;
   --status-good:     #0ca30c;
   --status-warning:  #fab219;
   --status-critical: #d03b3b;
 
   --slot-aqua:    #1baf7a;
-  --slot-magenta: #e87ba4;
+  /* Rose officiel mc2i (accent1 du thème "mc2i final"). */
+  --slot-magenta: #DD0061;
 
   --node-person:         var(--slot-blue);
   --node-person-sm:      var(--slot-violet);
@@ -44,13 +48,16 @@
 
     --slot-blue:    #3987e5;
     --slot-orange:  #d95926;
-    --slot-violet:  #9085e9;
+    /* Le book mc2i ne définit pas de variante sombre : bleu marine officiel
+       (#170B8F) éclairci pour rester lisible en texte sur fond quasi noir. */
+    --slot-violet:  #8C87D9;
     --status-good:     #0ca30c;
     --status-warning:  #fab219;
     --status-critical: #e66767;
 
     --slot-aqua:    #199e70;
-    --slot-magenta: #d55181;
+    /* Rose officiel mc2i (#DD0061) éclairci pour le même motif. */
+    --slot-magenta: #E85C93;
 
     --node-person:         var(--slot-blue);
     --node-person-sm:      var(--slot-violet);
@@ -71,7 +78,7 @@
 html, body {
   margin: 0;
   height: 100%;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "Lato", system-ui, -apple-system, "Segoe UI", sans-serif;
   background: var(--page-plane);
   color: var(--text-primary);
 }

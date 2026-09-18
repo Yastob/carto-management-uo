@@ -185,3 +185,16 @@ en dessous, chacune avec sa case "Afficher" et ses réglages propres.
   ses relations directes. Cliquer dessus épingle l'affichage et zoome sur son
   entourage ; cliquer dans le vide réinitialise la vue. La recherche retrouve aussi
   les réunions d'équipe par leur nom.
+
+## Charte graphique
+
+Couleur d'identité (titre, onglet actif, boutons) et rose secondaire (tag "Consultant
+isolé", rôle Chef de projet) repris de la présentation corporate mc2i officielle
+(thème PowerPoint "mc2i final") :
+
+- Bleu marine `#170B8F` (variable `--slot-violet`)
+- Rose `#DD0061` (variable `--slot-magenta`)
+
+Les variantes utilisées en thème sombre sont ces mêmes teintes éclaircies pour rester
+lisibles sur fond quasi noir (le book ne définit pas de mode sombre). Police : Lato
+(chargée depuis Google Fonts), utilisée partout dans les 3 pages.
