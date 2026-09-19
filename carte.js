@@ -94,13 +94,22 @@
       .map((r) => `${byRole[r]} ${ROLE_LABELS[r]}${byRole[r] > 1 && r !== "CP" ? "s" : ""}`)
       .join(", ");
     const counts = alertCounts(markers);
-    const names = collabs.map((c) => CartoApp.collabName(c)).sort((a, b) => a.localeCompare(b));
-    const shown = names.slice(0, MAX_NAMES_IN_CLUSTER_TIP);
-    const rest = names.length - shown.length;
+    // Les personnes en alerte s'affichent dans la couleur de leur alerte. Si la liste est
+    // tronquée, elles passent en priorité pour ne jamais être masquées.
+    const people = markers
+      .map((m) => ({ name: CartoApp.collabName(m.options.collab), status: m.options.followUp }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const flagged = people.filter((p) => p.status === "gap" || p.status === "referent");
+    const others = people.filter((p) => !flagged.includes(p)).slice(0, Math.max(0, MAX_NAMES_IN_CLUSTER_TIP - flagged.length));
+    const shown = [...flagged, ...others].sort((a, b) => a.name.localeCompare(b.name));
+    const rest = people.length - shown.length;
+    const namesHtml = shown
+      .map((p) => (p.status === "gap" || p.status === "referent" ? `<span class="map-name-${p.status}">${esc(p.name)}</span>` : esc(p.name)))
+      .join(", ");
     return `
       <div class="tt-title">${collabs.length} personnes</div>
       <div class="tt-sub">${esc(breakdown)}</div>
-      <div>${shown.map(esc).join(", ")}${rest > 0 ? ` et ${rest} autre(s)` : ""}</div>
+      <div>${namesHtml}${rest > 0 ? ` et ${rest} autre(s)` : ""}</div>
       ${counts.gap ? `<div class="tt-row map-tip-alert map-tip-alert-gap">${ALERT_GLYPH} ${counts.gap} sans réunion commune avec un responsable</div>` : ""}
       ${counts.referent ? `<div class="tt-row map-tip-alert map-tip-alert-referent">${ALERT_GLYPH} ${counts.referent} suivi(s) uniquement par un consultant référent</div>` : ""}`;
   }

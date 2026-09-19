@@ -855,3 +855,5 @@ main.editor-main { display: block; overflow-x: hidden; }
 .map-alert-referent { color: var(--status-warning); }
 .map-tip-alert-gap { color: var(--gap-warning); }
 .map-tip-alert-referent { color: var(--status-warning); }
+.map-name-gap { color: var(--gap-warning); font-weight: 700; }
+.map-name-referent { color: var(--status-warning); font-weight: 700; }
