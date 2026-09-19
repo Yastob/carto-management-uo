@@ -17,6 +17,15 @@
     { key: "compte_reference", label: "Compte de référence" },
   ];
 
+  // (Déclaré ici pour la même raison que RATTACH_TEXT_FIELDS.)
+  // Zone de contrôle pour l'Île-de-France (rectangle large) : sert uniquement à signaler
+  // une adresse manifestement hors zone, pas à filtrer.
+  const IDF_BOUNDS = { latMin: 48.1, latMax: 49.25, lonMin: 1.4, lonMax: 3.6 };
+  const parseCoord = (v) => {
+    const n = parseFloat(String(v).replace(",", "."));
+    return Number.isFinite(n) ? n : null;
+  };
+
   // Palette Okabe-Ito : conçue pour rester distinguable en cas de daltonisme
   // (protanopie/deutéranopie/tritanopie), volontairement sans paire rouge/vert.
   const PERIODICITE_ORDER = ["Hebdomadaire", "2 fois par mois", "Mensuel", "Tous les 2 mois", "Ponctuel"];
@@ -358,6 +367,7 @@
   function mergeRattachFiles(files, collabIds, nameOf) {
     const byId = {};
     const errors = [];
+    const warnings = [];
     files.forEach((file) => {
       file.rows.forEach((row) => {
         const id = norm(row.id);
@@ -387,6 +397,25 @@
             );
           }
         });
+        // Adresse de mission : même règle que les autres champs texte (1er non vide gagne,
+        // conflit = erreur). lat/lon sont liés à l'adresse et suivent la même valeur.
+        const adr = norm(row.adresse_mission);
+        if (adr) {
+          const lat = parseCoord(row.lat);
+          const lon = parseCoord(row.lon);
+          if (!entry.adresse) entry.adresse = { value: adr, lat, lon, files: [file.name] };
+          else if (entry.adresse.value === adr) {
+            entry.adresse.files.push(file.name);
+            if (entry.adresse.lat === null && lat !== null && lon !== null) {
+              entry.adresse.lat = lat;
+              entry.adresse.lon = lon;
+            }
+          } else {
+            errors.push(
+              `Conflit sur ${nameOf(id)} (${id}) — champ "Adresse de mission" : "${entry.adresse.value}" (${entry.adresse.files.join(", ")}) vs "${adr}" (${file.name}). Choisis la bonne valeur et recharge le fichier corrigé.`
+            );
+          }
+        }
         TAG_DEFS.forEach((t) => {
           if (isOui(row[t.key])) entry.tags[t.key] = true;
         });
@@ -400,11 +429,26 @@
         manager_id: entry.fields.manager_id ? entry.fields.manager_id.value : "",
         chef_de_projet_id: entry.fields.chef_de_projet_id ? entry.fields.chef_de_projet_id.value : "",
         compte_reference: entry.fields.compte_reference ? entry.fields.compte_reference.value : "",
+        adresse_mission: entry.adresse ? entry.adresse.value : "",
+        lat: entry.adresse ? entry.adresse.lat : null,
+        lon: entry.adresse ? entry.adresse.lon : null,
         tags: TAG_DEFS.filter((t) => entry.tags[t.key]).map((t) => t.label),
         date_maj: entry.date_maj,
       };
     });
-    return { rattachById, errors };
+    Object.entries(rattachById).forEach(([id, r]) => {
+      if (!r.adresse_mission) return;
+      if (r.lat === null || r.lon === null) {
+        warnings.push(
+          `${nameOf(id)} (${id}) : l'adresse de mission « ${r.adresse_mission} » n'a pas de coordonnées — elle n'apparaît pas sur la carte. Ressaisis-la dans l'éditeur de rattachements en choisissant une suggestion.`
+        );
+      } else if (r.lat < IDF_BOUNDS.latMin || r.lat > IDF_BOUNDS.latMax || r.lon < IDF_BOUNDS.lonMin || r.lon > IDF_BOUNDS.lonMax) {
+        warnings.push(
+          `${nameOf(id)} (${id}) : l'adresse de mission « ${r.adresse_mission} » semble hors d'Île-de-France — vérifie-la (elle reste affichée sur la carte, hors de la zone visible par défaut).`
+        );
+      }
+    });
+    return { rattachById, errors, warnings };
   }
 
   function parsePointRow(row) {
@@ -490,7 +534,7 @@
     const collabIds = raw.collab ? new Set(Object.keys(idToName)) : null;
     const nameOf = (id) => idToName[id] || id;
 
-    const { rattachById, errors: rattachErrors } = mergeRattachFiles(raw.rattachFiles, collabIds, nameOf);
+    const { rattachById, errors: rattachErrors, warnings: rattachWarnings } = mergeRattachFiles(raw.rattachFiles, collabIds, nameOf);
     const { points, errors: pointErrors, warnings } = mergePointsFiles(raw.pointsFiles, collabIds, nameOf);
 
     const collaborateurs = (raw.collab || [])
@@ -501,6 +545,9 @@
           manager_id: "",
           chef_de_projet_id: "",
           compte_reference: "",
+          adresse_mission: "",
+          lat: null,
+          lon: null,
           tags: [],
           date_maj: "",
         };
@@ -514,7 +561,7 @@
         };
       });
 
-    return { collaborateurs, points, report: { errors: rattachErrors.concat(pointErrors), warnings } };
+    return { collaborateurs, points, report: { errors: rattachErrors.concat(pointErrors), warnings: rattachWarnings.concat(warnings) } };
   }
 
   function renderConsistencyReport(report) {
@@ -603,7 +650,14 @@
     return [...ids].map(findCollab).filter(Boolean);
   }
 
+  // Point d'entrée unique appelé par tous les filtres/toggles : reconstruit le graphe puis
+  // prévient la vue Carte (carte.js) pour qu'elle se recale sur le même état filtré.
   function rebuildGraph() {
+    rebuildNetwork();
+    if (window.CartoMap) window.CartoMap.refresh();
+  }
+
+  function rebuildNetwork() {
     const showRattachements = els.toggleRattachements.checked;
     const showPoints = els.togglePoints.checked;
     const showPointsIndividuel = els.togglePointsIndividuel.checked;
@@ -1208,6 +1262,7 @@
   }
 
   function onSearch(e) {
+    if (document.body.classList.contains("view-carte")) return; // la recherche est gérée par carte.js
     const q = e.target.value.trim().toLowerCase();
     if (!q || !allNodesDataset) {
       pinnedId = null;
@@ -1240,4 +1295,16 @@
     network.selectNodes(nodeMatches.map((n) => n.id));
     network.fit({ nodes: [...ids], animation: true });
   }
+  // API minimale pour carte.js : lecture seule de l'état déjà fusionné et des filtres.
+  window.CartoApp = {
+    getCollabs: () => state.collaborateurs,
+    getFilters: () => ({ compte: els.filterCompte.value, sm: els.filterSmViz.value }),
+    getStatsText: () => els.stats.textContent,
+    setStatsText: (t) => (els.stats.textContent = t),
+    collabName,
+    roleOf,
+    roleColorVar,
+    cssVar,
+    tagPillsHtml,
+  };
 })();

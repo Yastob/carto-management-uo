@@ -245,7 +245,7 @@ main {
 }
 #empty-state strong { color: var(--text-secondary); }
 
-#legend {
+#legend, #map-side {
   width: 200px;
   flex-shrink: 0;
   background: var(--surface-1);
@@ -261,14 +261,14 @@ main {
   color: var(--slot-violet);
   margin: 0 0 12px;
 }
-#legend h2 {
+#legend h2, #map-side h2 {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-muted);
   margin: 0 0 8px;
 }
-#legend h2:not(:first-child) { margin-top: 16px; }
+#legend h2:not(:first-child), #map-side h2:not(:first-child) { margin-top: 16px; }
 .legend-row {
   display: flex;
   align-items: center;
@@ -668,3 +668,78 @@ main {
 
 select optgroup { font-weight: 700; font-style: normal; color: var(--text-muted); }
 select option { color: var(--text-primary); }
+
+
+/* ---------- Adresse de mission (éditeur de rattachements) ---------- */
+.addr-cell { position: relative; min-width: 260px; }
+.addr-input {
+  width: 100%;
+  padding: 5px 7px;
+  border: 1px solid var(--gridline);
+  border-radius: 6px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+.addr-status { font-size: 11px; color: var(--gap-warning); min-height: 14px; margin-top: 2px; }
+.addr-status.addr-ok { color: var(--status-good); }
+.addr-suggestions {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+}
+.addr-suggestions[hidden] { display: none; }
+.addr-suggestions li { padding: 6px 10px; font-size: 12.5px; cursor: pointer; }
+.addr-suggestions li:hover { background: var(--gridline); }
+.addr-suggestions li.addr-none { color: var(--text-muted); cursor: default; }
+.addr-suggestions li.addr-none:hover { background: none; }
+
+/* ---------- Vue Carte ---------- */
+button.tab-secondary { border: 0; background: none; font-family: inherit; cursor: pointer; }
+button.tab-secondary:hover { background: var(--gridline); }
+button.tab-secondary.current { background: var(--slot-violet); }
+#map-view { display: none; flex: 1; min-width: 0; }
+#map { flex: 1; min-width: 0; background: var(--surface-1); }
+body.view-carte #map-view { display: flex; }
+body.view-carte #network,
+body.view-carte #legend,
+body.view-carte #row-graph-options { display: none; }
+.map-unlocated { list-style: none; margin: 0; padding: 0; }
+.map-unlocated li { padding: 2px 0; }
+.map-unlocated li small { color: var(--text-muted); }
+.mc-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--slot-violet);
+  color: #fff;
+  font-weight: 700;
+  border: 3px solid rgba(255,255,255,0.85);
+  box-shadow: 0 0 0 2px var(--slot-violet), 0 2px 6px rgba(0,0,0,0.3);
+  box-sizing: border-box;
+}
+.mc-cluster-legend { width: 24px; height: 24px; font-size: 11px; flex-shrink: 0; }
+.leaflet-tooltip.carto-tip {
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  white-space: normal;
+  width: max-content;
+  min-width: 180px;
+  max-width: 300px;
+}
+.carto-tip .tt-title { font-weight: 700; }
+.carto-tip .tt-sub { color: var(--text-muted); margin-bottom: 4px; }
+.carto-tip .tt-row { margin-top: 3px; }
+.carto-tip .tt-label { color: var(--text-muted); }
+.carto-tip .tt-pills { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }

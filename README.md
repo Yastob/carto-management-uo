@@ -135,8 +135,13 @@ avec des exemples — sauvegarde tes données avant si besoin.
     prenom, poste, senior_manager_id`) doit être réordonné une fois : `python
     scripts/migrate_collab_column_order.py chemin/vers/collaborateurs.xlsx`.
 - **rattachements.xlsx** → onglet Rattachements : `id, manager_id,
-  chef_de_projet_id, compte_reference, tag_haut_potentiel, tag_en_fragilite,
-  tag_consultant_isole, date_maj`.
+  chef_de_projet_id, compte_reference, adresse_mission, lat, lon, tag_haut_potentiel,
+  tag_en_fragilite, tag_consultant_isole, date_maj`.
+  - `adresse_mission` / `lat` / `lon` : une seule adresse par personne (le site de la
+    mission, pas le domicile), saisie avec autocomplétion dans l'éditeur de rattachements
+    (API de géocodage de la Géoplateforme/IGN, gratuite, sans clé). Les coordonnées sont
+    stockées dans le fichier : rien n'est géocodé à l'ouverture. Modifier l'adresse à la
+    main invalide les coordonnées jusqu'au choix d'une nouvelle suggestion.
   - `manager_id` / `chef_de_projet_id` : encadrement opérationnel, optionnel, peut
     pointer vers quelqu'un d'un autre périmètre SM.
 - **reunions.xlsx** → onglet Réunions : `id, nom, animateur_id, participants_ids
@@ -144,6 +149,20 @@ avec des exemples — sauvegarde tes données avant si besoin.
 
 Il n'y a pas de notion d'actif/inactif : un départ ou l'arrêt d'une réunion se gère en
 supprimant la ligne correspondante plutôt qu'en la désactivant.
+
+## Vue Carte (V2)
+
+Onglet **Visualisation → Carte** : un point par collaborateur localisé, sur fond
+OpenStreetMap (Leaflet), vue initiale recadrée sur l'Île-de-France. Les points proches se
+regroupent en gros points (nombre de personnes), dont le survol détaille les rôles et les
+noms ; plusieurs personnes à la même adresse s'ouvrent en éventail au clic. Les filtres
+compte / périmètre SM et la recherche s'appliquent aussi à la carte. Les personnes sans
+adresse localisée sont listées à part (« Non localisés »). Le rapport de cohérence signale
+une adresse sans coordonnées ou manifestement hors Île-de-France.
+
+Confidentialité : chaque frappe dans le champ d'adresse est envoyée à l'API publique de
+la Géoplateforme (uniquement le texte de l'adresse) ; les tuiles OpenStreetMap ne
+reçoivent que la zone affichée.
 
 ## Légende de la visualisation
 

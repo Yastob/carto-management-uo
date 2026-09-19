@@ -35,9 +35,10 @@ COLLAB_WIDTHS = [8, 18, 18, 18, 16, 13, 11]
 
 RATTACH_HEADERS = [
     "id", "manager_id", "chef_de_projet_id", "compte_reference",
+    "adresse_mission", "lat", "lon",
     "tag_haut_potentiel", "tag_en_fragilite", "tag_consultant_isole", "date_maj",
 ]
-RATTACH_WIDTHS = [8, 12, 18, 18, 18, 16, 20, 12]
+RATTACH_WIDTHS = [8, 12, 18, 18, 40, 10, 10, 18, 16, 20, 12]
 
 POINT_HEADERS = [
     "id", "nom", "animateur_id", "participants_ids", "type", "periodicite",
@@ -180,6 +181,8 @@ def build_rattachements_workbook(rows=None):
         ("  Sectoriel' / 'CP Sectoriel' si hors de cette UO. Peuvent pointer vers quelqu'un", NORMAL_FONT),
         ("  rattaché à un AUTRE Senior Manager — pas de contrainte de périmètre.", NORMAL_FONT),
         ("- compte_reference : client chez qui la personne travaille.", NORMAL_FONT),
+        ("- adresse_mission / lat / lon : adresse du site de mission (PAS le domicile) et ses", NORMAL_FONT),
+        ("  coordonnées, renseignées par l'autocomplétion de editeur-rattachements.html.", NORMAL_FONT),
         ("", NORMAL_FONT),
         ("Charge ensuite ce fichier avec collaborateurs.xlsx et reunions.xlsx dans index.html.", NORMAL_FONT),
     ])

@@ -151,6 +151,9 @@
         manager_id: norm(r.manager_id),
         chef_de_projet_id: norm(r.chef_de_projet_id),
         compte_reference: norm(r.compte_reference),
+        adresse_mission: norm(r.adresse_mission),
+        lat: norm(r.lat),
+        lon: norm(r.lon),
         tag_haut_potentiel: isOui(r.tag_haut_potentiel),
         tag_en_fragilite: isOui(r.tag_en_fragilite),
         tag_consultant_isole: isOui(r.tag_consultant_isole),
@@ -234,6 +237,9 @@
         manager_id: "",
         chef_de_projet_id: "",
         compte_reference: "",
+        adresse_mission: "",
+        lat: "",
+        lon: "",
         tag_haut_potentiel: false,
         tag_en_fragilite: false,
         tag_consultant_isole: false,
@@ -312,6 +318,83 @@
     `;
   }
 
+  // --- Adresse de mission : autocomplétion via l'API de géocodage de la Géoplateforme (IGN) ---
+  // Gratuite, sans clé. Chaque frappe est envoyée à ce service public : on n'y met que
+  // l'adresse du site de mission, jamais le nom de la personne. Les coordonnées choisies
+  // sont stockées dans le fichier pour ne pas géocoder à chaque ouverture.
+  const GEOCODE_URL = "https://data.geopf.fr/geocodage/search";
+  const addrTimers = new Map();
+  let addrSeq = 0;
+
+  function escAttr(v) {
+    return String(v || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  }
+
+  function setAddrStatus(td, r) {
+    const st = td.querySelector(".addr-status");
+    if (!r.adresse_mission) st.textContent = "";
+    else if (r.lat && r.lon) st.textContent = "✓ Localisée";
+    else st.textContent = "Choisis une suggestion pour la localiser";
+    st.classList.toggle("addr-ok", !!(r.lat && r.lon));
+  }
+
+  function onAddressInput(input) {
+    const td = input.closest(".addr-cell");
+    const id = input.dataset.id;
+    const r = getRattach(id);
+    // Toute modification manuelle invalide les coordonnées jusqu'au choix d'une suggestion.
+    r.adresse_mission = input.value.trim();
+    r.lat = "";
+    r.lon = "";
+    setAddrStatus(td, r);
+    const list = td.querySelector(".addr-suggestions");
+    clearTimeout(addrTimers.get(id));
+    if (input.value.trim().length < 3) {
+      list.hidden = true;
+      return;
+    }
+    addrTimers.set(id, setTimeout(() => fetchSuggestions(input.value.trim(), list), 250));
+  }
+
+  async function fetchSuggestions(query, list) {
+    const seq = ++addrSeq;
+    list.dataset.seq = String(seq);
+    try {
+      // lat/lon : simple biais de pertinence vers Paris, pas un filtre strict.
+      const url = `${GEOCODE_URL}?q=${encodeURIComponent(query)}&limit=6&index=address&lat=48.86&lon=2.35`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      if (list.dataset.seq !== String(seq)) return; // une frappe plus récente a pris le relais
+      const feats = (data.features || []).filter((f) => f.geometry && f.geometry.coordinates);
+      list.innerHTML = feats.length
+        ? feats
+            .map(
+              (f) =>
+                `<li data-label="${escAttr(f.properties.label)}" data-lon="${f.geometry.coordinates[0]}" data-lat="${f.geometry.coordinates[1]}">${escAttr(f.properties.label)}</li>`
+            )
+            .join("")
+        : `<li class="addr-none">Aucune adresse trouvée</li>`;
+      list.hidden = false;
+    } catch (err) {
+      list.innerHTML = `<li class="addr-none">Recherche d'adresse indisponible (${escAttr(err.message)})</li>`;
+      list.hidden = false;
+    }
+  }
+
+  function pickSuggestion(li) {
+    if (!li.dataset.label) return;
+    const td = li.closest(".addr-cell");
+    const input = td.querySelector(".addr-input");
+    const r = getRattach(input.dataset.id);
+    r.adresse_mission = li.dataset.label;
+    r.lat = Number(li.dataset.lat).toFixed(6);
+    r.lon = Number(li.dataset.lon).toFixed(6);
+    input.value = r.adresse_mission;
+    td.querySelector(".addr-suggestions").hidden = true;
+    setAddrStatus(td, r);
+  }
+
   function render() {
     const filter = norm(els.search.value).toLowerCase();
     const smFilter = els.filterSm.value;
@@ -362,18 +445,24 @@
         <td><select data-id="${c.id}" data-field="manager_id">${mgrOptions}</select></td>
         <td><select data-id="${c.id}" data-field="chef_de_projet_id">${cpOptions}</select></td>
         <td><input type="text" data-id="${c.id}" data-field="compte_reference" value="${r.compte_reference}" placeholder="À renseigner" class="${r.compte_reference ? "" : "field-empty"}" style="width:100%;padding:5px 7px;border:1px solid var(--gridline);border-radius:6px;background:var(--surface-1);color:var(--text-primary)"></td>
+        <td class="addr-cell">
+          <input type="text" data-id="${c.id}" data-field="adresse_mission" value="${escAttr(r.adresse_mission)}" placeholder="Rechercher une adresse…" autocomplete="off" class="addr-input">
+          <div class="addr-status"></div>
+          <ul class="addr-suggestions" hidden></ul>
+        </td>
         <td>
           <label class="checkbox-row"><input type="checkbox" data-id="${c.id}" data-field="tag_haut_potentiel" ${r.tag_haut_potentiel ? "checked" : ""} ${hpDisabled ? "disabled" : ""}> Haut potentiel</label>
           <label class="checkbox-row"><input type="checkbox" data-id="${c.id}" data-field="tag_en_fragilite" ${r.tag_en_fragilite ? "checked" : ""} ${otherTagsDisabled ? "disabled" : ""}> En fragilité</label>
           <label class="checkbox-row"><input type="checkbox" data-id="${c.id}" data-field="tag_consultant_isole" ${r.tag_consultant_isole ? "checked" : ""} ${otherTagsDisabled ? "disabled" : ""}> Consultant isolé</label>
         </td>
       `;
+      setAddrStatus(tr.querySelector(".addr-cell"), r);
       tr.querySelector('[data-field="manager_id"]').value = r.manager_id;
       tr.querySelector('[data-field="chef_de_projet_id"]').value = r.chef_de_projet_id;
       els.tableBody.appendChild(tr);
     });
 
-    els.tableBody.querySelectorAll("select, input").forEach((el) => {
+    els.tableBody.querySelectorAll("select, input:not(.addr-input)").forEach((el) => {
       el.addEventListener("change", (e) => {
         const id = e.target.dataset.id;
         const field = e.target.dataset.field;
@@ -389,6 +478,19 @@
     });
   }
 
+  els.tableBody.addEventListener("input", (e) => {
+    if (e.target.classList.contains("addr-input")) onAddressInput(e.target);
+  });
+  els.tableBody.addEventListener("click", (e) => {
+    const li = e.target.closest(".addr-suggestions li");
+    if (li) pickSuggestion(li);
+  });
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".addr-cell")) {
+      els.tableBody.querySelectorAll(".addr-suggestions").forEach((u) => (u.hidden = true));
+    }
+  });
+
   els.search.addEventListener("input", render);
   els.filterSm.addEventListener("change", render);
 
@@ -396,12 +498,14 @@
     const today = todayISO();
     const rows = [
       ["id", "manager_id", "chef_de_projet_id", "compte_reference",
+        "adresse_mission", "lat", "lon",
         "tag_haut_potentiel", "tag_en_fragilite", "tag_consultant_isole", "date_maj"],
     ];
     collaborateurs.forEach((c) => {
       const r = getRattach(c.id);
       rows.push([
         c.id, r.manager_id, r.chef_de_projet_id, r.compte_reference,
+        r.adresse_mission, r.lat, r.lon,
         r.tag_haut_potentiel ? "Oui" : "Non",
         r.tag_en_fragilite ? "Oui" : "Non",
         r.tag_consultant_isole ? "Oui" : "Non",

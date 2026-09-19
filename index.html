@@ -10,6 +10,10 @@
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/dist/vis-network.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
 <script src="xlsx-helpers.js"></script>
 <script src="shared-state.js"></script>
 </head>
@@ -79,6 +83,10 @@
   </section>
 
   <div id="step-viz" style="display:none; flex:1; flex-direction:column; min-height:0">
+    <nav class="tabs-secondary" id="viz-tabs">
+      <button type="button" class="tab-secondary current" data-view="graphe">Graphe</button>
+      <button type="button" class="tab-secondary" data-view="carte">Carte</button>
+    </nav>
     <header id="viz-toolbar">
       <div class="header-row">
         <button class="btn btn-secondary btn-small" id="btn-back">← Modifier les fichiers</button>
@@ -94,7 +102,7 @@
         </div>
         <span id="stats"></span>
       </div>
-      <div class="header-row">
+      <div class="header-row" id="row-graph-options">
         <div class="header-group">
           <span class="header-group-label">Rattachements</span>
           <label class="toggle">
@@ -123,6 +131,23 @@
     </header>
     <main>
       <div id="network"></div>
+      <div id="map-view">
+        <div id="map"></div>
+        <aside id="map-side">
+          <h1 class="legend-title">Légende</h1>
+          <h2>Rôle</h2>
+          <div class="legend-row"><span class="legend-swatch" style="background:var(--node-person-sm)"></span> Senior Manager</div>
+          <div class="legend-row"><span class="legend-swatch" style="background:var(--node-person-manager)"></span> Manager</div>
+          <div class="legend-row"><span class="legend-swatch" style="background:var(--node-person-cp)"></span> Chef de projet / Directeur de projet</div>
+          <div class="legend-row"><span class="legend-swatch" style="background:var(--node-person)"></span> Consultant</div>
+          <h2>Alerte</h2>
+          <div class="legend-row"><span class="legend-swatch" style="background:var(--node-person); border:3px solid var(--ring-fragile)"></span> En fragilité</div>
+          <h2>Regroupement</h2>
+          <div class="legend-row"><span class="mc-cluster mc-cluster-legend">3</span> Personnes proches (survole pour le détail, clique pour zoomer)</div>
+          <h2 id="map-unlocated-title">Non localisés (0)</h2>
+          <ul id="map-unlocated" class="map-unlocated"></ul>
+        </aside>
+      </div>
       <div id="empty-state">
         <strong>Aucune donnée chargée</strong>
         <span>Reviens à l'étape précédente pour charger tes fichiers.</span>
@@ -161,5 +186,6 @@
   </div>
 </div>
 <script src="app.js"></script>
+<script src="carte.js"></script>
 </body>
 </html>
