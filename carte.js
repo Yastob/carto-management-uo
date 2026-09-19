@@ -59,8 +59,11 @@
       iconCreateFunction: (cl) => {
         const n = cl.getChildCount();
         const size = Math.round(30 + Math.min(34, Math.sqrt(n) * 5));
+        const counts = alertCounts(cl.getAllChildMarkers());
+        const worst = counts.gap ? "gap" : counts.referent ? "referent" : "";
+        const badge = worst ? `<span class="map-alert map-alert-${worst}">${ALERT_GLYPH}</span>` : "";
         return L.divIcon({
-          html: `<div class="mc-cluster" style="width:${size}px;height:${size}px;font-size:${size > 44 ? 15 : 13}px">${n}</div>`,
+          html: `<div class="mc-cluster" style="width:${size}px;height:${size}px;font-size:${size > 44 ? 15 : 13}px">${n}</div>${badge}`,
           className: "",
           iconSize: [size, size],
         });
@@ -74,6 +77,15 @@
     return true;
   }
 
+  function alertCounts(markers) {
+    const counts = { gap: 0, referent: 0 };
+    markers.forEach((m) => {
+      if (m.options.followUp === "gap") counts.gap++;
+      else if (m.options.followUp === "referent") counts.referent++;
+    });
+    return counts;
+  }
+
   function clusterTooltipHtml(markers) {
     const collabs = markers.map((m) => m.options.collab);
     const byRole = {};
@@ -81,36 +93,53 @@
     const breakdown = ROLE_ORDER.filter((r) => byRole[r])
       .map((r) => `${byRole[r]} ${ROLE_LABELS[r]}${byRole[r] > 1 && r !== "CP" ? "s" : ""}`)
       .join(", ");
+    const counts = alertCounts(markers);
     const names = collabs.map((c) => CartoApp.collabName(c)).sort((a, b) => a.localeCompare(b));
     const shown = names.slice(0, MAX_NAMES_IN_CLUSTER_TIP);
     const rest = names.length - shown.length;
     return `
       <div class="tt-title">${collabs.length} personnes</div>
       <div class="tt-sub">${esc(breakdown)}</div>
-      <div>${shown.map(esc).join(", ")}${rest > 0 ? ` et ${rest} autre(s)` : ""}</div>`;
+      <div>${shown.map(esc).join(", ")}${rest > 0 ? ` et ${rest} autre(s)` : ""}</div>
+      ${counts.gap ? `<div class="tt-row map-tip-alert map-tip-alert-gap">${ALERT_GLYPH} ${counts.gap} sans réunion commune avec un responsable</div>` : ""}
+      ${counts.referent ? `<div class="tt-row map-tip-alert map-tip-alert-referent">${ALERT_GLYPH} ${counts.referent} suivi(s) uniquement par un consultant référent</div>` : ""}`;
   }
 
-  function markerTooltipHtml(c) {
+  function markerTooltipHtml(c, status) {
     return `
       <div class="tt-title">${esc(CartoApp.collabName(c))}</div>
       <div class="tt-sub">${esc(c.poste || "Poste non précisé")}</div>
       ${c.compte_reference ? `<div class="tt-row"><span class="tt-label">Compte de référence :</span> ${esc(c.compte_reference)}</div>` : ""}
       <div class="tt-row"><span class="tt-label">Adresse de mission :</span> ${esc(c.adresse_mission)}</div>
-      ${CartoApp.tagPillsHtml(c.tags)}`;
+      ${CartoApp.tagPillsHtml(c.tags)}
+      ${status === "gap" ? `<div class="tt-row map-tip-alert map-tip-alert-gap">${ALERT_GLYPH} ${ALERT_TEXT.gap}</div>` : ""}
+      ${status === "referent" ? `<div class="tt-row map-tip-alert map-tip-alert-referent">${ALERT_GLYPH} ${ALERT_TEXT.referent}</div>` : ""}`;
   }
+
+  const ALERT_GLYPH = "\u26A0\uFE0E"; // U+FE0E : force le rendu texte (colorable), pas l'emoji
+  const ALERT_TEXT = {
+    gap: "Aucune réunion commune avec un responsable (SM/Manager/CP)",
+    referent: "Réunion commune uniquement avec son consultant référent (aucune avec SM/Manager/CP)",
+  };
 
   function buildMarker(c) {
     const role = roleKey(c);
+    const status = CartoApp.followUpStatus(c); // "ok" | "referent" | "gap"
     const fragile = c.tags.includes("En fragilité");
-    const m = L.circleMarker([c.lat, c.lon], {
-      radius: role === "SM" ? 10 : role === "Consultant" ? 7 : 8.5,
-      fillColor: CartoApp.cssVar(CartoApp.roleColorVar(CartoApp.roleOf(c.poste))),
-      fillOpacity: 0.95,
-      color: fragile ? CartoApp.cssVar("--ring-fragile") : "#ffffff",
-      weight: fragile ? 3.5 : 2,
+    const d = role === "SM" ? 22 : role === "Consultant" ? 16 : 19;
+    const dotColor = CartoApp.cssVar(CartoApp.roleColorVar(CartoApp.roleOf(c.poste)));
+    const ring = fragile ? CartoApp.cssVar("--ring-fragile") : "#ffffff";
+    const badge = status === "ok" ? "" : `<span class="map-alert map-alert-${status}">${ALERT_GLYPH}</span>`;
+    const m = L.marker([c.lat, c.lon], {
+      icon: L.divIcon({
+        className: "",
+        iconSize: [d, d],
+        html: `<div class="map-dot" style="width:${d}px;height:${d}px;background:${dotColor};border:${fragile ? 3.5 : 2}px solid ${ring}"></div>${badge}`,
+      }),
       collab: c,
+      followUp: status,
     });
-    m.bindTooltip(markerTooltipHtml(c), { className: "carto-tip", direction: "top", offset: [0, -6] });
+    m.bindTooltip(markerTooltipHtml(c, status), { className: "carto-tip", direction: "top", offset: [0, -d / 2] });
     return m;
   }
 
@@ -151,7 +180,15 @@
       )
       .join("");
 
-    if (active) CartoApp.setStatsText(`${located.length} localisé(s) · ${unlocated.length} non localisé(s)`);
+    const nbGap = located.filter((c) => CartoApp.followUpStatus(c) === "gap").length;
+    const nbRef = located.filter((c) => CartoApp.followUpStatus(c) === "referent").length;
+    if (active) {
+      CartoApp.setStatsText(
+        `${located.length} localisé(s) · ${unlocated.length} non localisé(s)` +
+          (nbGap ? ` · ${ALERT_GLYPH} ${nbGap} sans réunion commune avec un responsable` : "") +
+          (nbRef ? ` · ${ALERT_GLYPH} ${nbRef} suivi(s) uniquement par un consultant référent` : "")
+      );
+    }
   }
 
   function setView(view) {

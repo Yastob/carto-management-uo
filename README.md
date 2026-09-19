@@ -167,7 +167,10 @@ Onglet **Visualisation → Carte** : un point par collaborateur localisé, sur f
 OpenStreetMap (Leaflet), vue initiale recadrée sur l'Île-de-France. Les points proches se
 regroupent en gros points (nombre de personnes), dont le survol détaille les rôles et les
 noms ; plusieurs personnes à la même adresse s'ouvrent en éventail au clic. Les filtres
-compte / périmètre SM et la recherche s'appliquent aussi à la carte. Les personnes sans
+compte / périmètre SM et la recherche s'appliquent aussi à la carte. Les alertes du graphe se retrouvent sur les
+pastilles : ⚠ rouge (aucune réunion commune avec un responsable) ou ⚠ jaune (réunion
+uniquement avec son consultant référent) ; un groupe affiche la plus grave de ses alertes
+et le détail au survol. Les personnes sans
 adresse localisée sont listées à part (« Non localisés »). Le rapport de cohérence signale
 une adresse sans coordonnées ou manifestement hors Île-de-France.
 

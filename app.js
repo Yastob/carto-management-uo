@@ -1371,5 +1371,6 @@
     roleColorVar,
     cssVar,
     tagPillsHtml,
+    followUpStatus,
   };
 })();
