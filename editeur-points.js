@@ -453,10 +453,10 @@
         (p) => `
         <tr>
           <td>${p.nom || "(Sans nom)"}</td>
-          <td>${p.type}</td>
-          <td>${p.periodicite}</td>
-          <td>${animateurLabel(p.animateur_id)}</td>
-          <td>${p.participants.size}</td>
+          <td data-label="Type">${p.type}</td>
+          <td data-label="Périodicité">${p.periodicite}</td>
+          <td data-label="Animateur">${animateurLabel(p.animateur_id)}</td>
+          <td data-label="Participants">${p.participants.size}</td>
           <td>
             <button class="btn btn-secondary btn-small" data-action="edit" data-id="${p.id}">Modifier</button>
             <button class="btn btn-danger btn-small" data-action="delete" data-id="${p.id}">Supprimer</button>

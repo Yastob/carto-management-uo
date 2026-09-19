@@ -395,7 +395,7 @@
           else if (entry.fields[key].value === val) entry.fields[key].files.push(file.name);
           else {
             errors.push(
-              `Conflit sur ${nameOf(id)} (${id}) — champ "${label}" : "${entry.fields[key].value}" (${entry.fields[key].files.join(", ")}) vs "${val}" (${file.name}). Choisis la bonne valeur et recharge le fichier corrigé.`
+              `Conflit sur ${nameOf(id)} — champ "${label}" : "${entry.fields[key].value}" (${entry.fields[key].files.join(", ")}) vs "${val}" (${file.name}). Choisis la bonne valeur et recharge le fichier corrigé.`
             );
           }
         });
@@ -414,7 +414,7 @@
             }
           } else {
             errors.push(
-              `Conflit sur ${nameOf(id)} (${id}) — champ "Adresse de mission" : "${entry.adresse.value}" (${entry.adresse.files.join(", ")}) vs "${adr}" (${file.name}). Choisis la bonne valeur et recharge le fichier corrigé.`
+              `Conflit sur ${nameOf(id)} — champ "Adresse de mission" : "${entry.adresse.value}" (${entry.adresse.files.join(", ")}) vs "${adr}" (${file.name}). Choisis la bonne valeur et recharge le fichier corrigé.`
             );
           }
         }
@@ -446,23 +446,23 @@
       if (!ref) return;
       if (posteOf(id) && posteOf(id) !== "Consultant") {
         warnings.push(
-          `${nameOf(id)} (${id}) est ${posteOf(id)} : un consultant référent ne peut être renseigné que pour un Consultant. Ce lien est ignoré dans la cartographie.`
+          `${nameOf(id)} est ${posteOf(id)} : un consultant référent ne peut être renseigné que pour un Consultant. Ce lien est ignoré dans la cartographie.`
         );
         r.consultant_referent_id = "";
         return;
       }
       if (ref === CONSULTANT_SECTORIEL) return;
       if (ref === id) {
-        errors.push(`${nameOf(id)} (${id}) est renseigné comme son propre consultant référent. Ce lien est ignoré.`);
+        errors.push(`${nameOf(id)} est renseigné comme son propre consultant référent. Ce lien est ignoré.`);
         r.consultant_referent_id = "";
       } else if (collabIds && !collabIds.has(ref)) {
         errors.push(
-          `${nameOf(id)} (${id}) a pour consultant référent l'id "${ref}", introuvable dans collaborateurs.xlsx. Ce lien est ignoré.`
+          `${nameOf(id)} a pour consultant référent l'id "${ref}", introuvable dans collaborateurs.xlsx. Ce lien est ignoré.`
         );
         r.consultant_referent_id = "";
       } else if (posteOf(ref) && posteOf(ref) !== "Consultant") {
         warnings.push(
-          `${nameOf(id)} (${id}) a pour consultant référent ${nameOf(ref)}, qui est ${posteOf(ref)} et non Consultant — utilise plutôt les colonnes Manager / Chef de projet.`
+          `${nameOf(id)} a pour consultant référent ${nameOf(ref)}, qui est ${posteOf(ref)} et non Consultant — utilise plutôt les colonnes Manager / Chef de projet.`
         );
       }
     });
@@ -471,11 +471,11 @@
       if (!r.adresse_mission) return;
       if (r.lat === null || r.lon === null) {
         warnings.push(
-          `${nameOf(id)} (${id}) : l'adresse de mission « ${r.adresse_mission} » n'a pas de coordonnées — elle n'apparaît pas sur la carte. Ressaisis-la dans l'éditeur de rattachements en choisissant une suggestion.`
+          `${nameOf(id)} : l'adresse de mission « ${r.adresse_mission} » n'a pas de coordonnées — elle n'apparaît pas sur la carte. Ressaisis-la dans l'éditeur de rattachements en choisissant une suggestion.`
         );
       } else if (r.lat < IDF_BOUNDS.latMin || r.lat > IDF_BOUNDS.latMax || r.lon < IDF_BOUNDS.lonMin || r.lon > IDF_BOUNDS.lonMax) {
         warnings.push(
-          `${nameOf(id)} (${id}) : l'adresse de mission « ${r.adresse_mission} » semble hors d'Île-de-France — vérifie-la (elle reste affichée sur la carte, hors de la zone visible par défaut).`
+          `${nameOf(id)} : l'adresse de mission « ${r.adresse_mission} » semble hors d'Île-de-France — vérifie-la (elle reste affichée sur la carte, hors de la zone visible par défaut).`
         );
       }
     });

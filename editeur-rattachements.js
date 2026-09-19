@@ -276,7 +276,7 @@
     const people = collaborateurs
       .filter((c) => c.id !== ownId && kind.pool(c))
       .sort((a, b) => collabName(a).localeCompare(collabName(b)))
-      .map((c) => ({ value: c.id, label: `${collabName(c)} (${c.id})` }));
+      .map((c) => ({ value: c.id, label: collabName(c) }));
     return [{ value: "", label: NONE_LABEL }, { value: kind.sentinel, label: kind.sentinel }, ...people];
   }
 
@@ -284,7 +284,7 @@
     if (!value) return "";
     if (value === COMBO_KINDS[field].sentinel) return value;
     const c = findCollabById(value);
-    return c ? `${collabName(c)} (${c.id})` : value;
+    return c ? collabName(c) : value;
   }
 
   function openComboList(input, filterText) {
@@ -307,6 +307,66 @@
     closeComboList(input);
     input.classList.remove("field-error");
   }
+
+  // --- Compte de référence : saisie libre + suggestions tirées des comptes déjà saisis ---
+  // Sert à réutiliser l'orthographe exacte d'un compte existant (évite "Société X" / "societe x").
+  function compteOptions(filterText) {
+    const seen = new Map();
+    Object.values(rattach).forEach((r) => {
+      const v = (r.compte_reference || "").trim();
+      if (v && !seen.has(fold(v))) seen.set(fold(v), v);
+    });
+    const q = fold(filterText || "");
+    return [...seen.values()].sort((a, b) => a.localeCompare(b)).filter((v) => !q || fold(v).includes(q));
+  }
+
+  function openCompteList(input, filterText) {
+    const list = input.closest(".combo-cell").querySelector(".combo-list");
+    const opts = compteOptions(filterText);
+    list.innerHTML = opts.map((v) => `<li data-compte="${escAttr(v)}">${escAttr(v)}</li>`).join("");
+    list.hidden = !opts.length;
+  }
+
+  function closeCompteList(input) {
+    input.closest(".combo-cell").querySelector(".combo-list").hidden = true;
+  }
+
+  function setCompte(input, value) {
+    input.value = value;
+    getRattach(input.dataset.id).compte_reference = value;
+    input.classList.toggle("field-empty", !value.trim());
+  }
+
+  els.tableBody.addEventListener("focusin", (e) => {
+    const input = e.target.closest(".compte-input");
+    if (input) openCompteList(input, "");
+  });
+  els.tableBody.addEventListener("input", (e) => {
+    const input = e.target.closest(".compte-input");
+    if (input) openCompteList(input, input.value);
+  });
+  els.tableBody.addEventListener("keydown", (e) => {
+    const input = e.target.closest(".compte-input");
+    if (input && (e.key === "Enter" || e.key === "Escape")) input.blur();
+  });
+  els.tableBody.addEventListener("mousedown", (e) => {
+    const li = e.target.closest(".combo-list li[data-compte]");
+    if (!li) return;
+    e.preventDefault();
+    const input = li.closest(".combo-cell").querySelector(".compte-input");
+    setCompte(input, li.dataset.compte);
+    closeCompteList(input);
+    input.blur();
+  });
+  els.tableBody.addEventListener("focusout", (e) => {
+    const input = e.target.closest(".compte-input");
+    if (!input) return;
+    // Même compte tapé avec une casse/accentuation différente : on reprend l'orthographe existante.
+    const typed = input.value.trim();
+    const hit = compteOptions("").find((v) => fold(v) === fold(typed));
+    setCompte(input, hit || typed);
+    closeCompteList(input);
+  });
 
   els.tableBody.addEventListener("focusin", (e) => {
     const input = e.target.closest(".combo-input");
@@ -478,8 +538,8 @@
     setAddrStatus(td, r);
   }
 
-  function comboCellHtml(id, field, value, disabled) {
-    return `<td class="combo-cell"><input type="text" class="combo-input" data-id="${id}" data-field="${field}" value="${escAttr(comboLabel(field, value))}" placeholder="—" autocomplete="off" ${disabled ? 'disabled title="Réservé aux consultants"' : ""}><ul class="combo-list" hidden></ul></td>`;
+  function comboCellHtml(id, field, value, disabled, label) {
+    return `<td class="combo-cell" data-label="${label}"><input type="text" class="combo-input" data-id="${id}" data-field="${field}" value="${escAttr(comboLabel(field, value))}" placeholder="—" autocomplete="off" ${disabled ? 'disabled title="Réservé aux consultants"' : ""}><ul class="combo-list" hidden></ul></td>`;
   }
 
   function render() {
@@ -529,17 +589,17 @@
           <span class="badge-poste" style="background:${cssVar(posteColorVar(c.poste))}">${c.poste || "—"}</span>
           ${isNewSinceSnapshot(c.id) ? `<span class="badge-poste" style="background:var(--status-good)">Nouveau</span>` : ""}
         </td>
-        <td>${smLabel}</td>
-        ${comboCellHtml(c.id, "manager_id", r.manager_id, false)}
-        ${comboCellHtml(c.id, "chef_de_projet_id", r.chef_de_projet_id, false)}
-        ${comboCellHtml(c.id, "consultant_referent_id", r.consultant_referent_id, referentDisabled)}
-        <td><input type="text" data-id="${c.id}" data-field="compte_reference" value="${r.compte_reference}" placeholder="À renseigner" class="${r.compte_reference ? "" : "field-empty"}" style="width:100%;padding:5px 7px;border:1px solid var(--gridline);border-radius:6px;background:var(--surface-1);color:var(--text-primary)"></td>
-        <td class="addr-cell">
+        <td data-label="Senior Manager">${smLabel}</td>
+        ${comboCellHtml(c.id, "manager_id", r.manager_id, false, "Manager")}
+        ${comboCellHtml(c.id, "chef_de_projet_id", r.chef_de_projet_id, false, "Chef de projet")}
+        ${comboCellHtml(c.id, "consultant_referent_id", r.consultant_referent_id, referentDisabled, "Consultant référent")}
+        <td class="combo-cell" data-label="Compte de référence"><input type="text" data-id="${c.id}" data-field="compte_reference" value="${escAttr(r.compte_reference)}" placeholder="À renseigner" autocomplete="off" class="compte-input ${r.compte_reference ? "" : "field-empty"}" style="width:100%;padding:5px 7px;border:1px solid var(--gridline);border-radius:6px;background:var(--surface-1);color:var(--text-primary)"><ul class="combo-list" hidden></ul></td>
+        <td class="addr-cell" data-label="Adresse de mission">
           <input type="text" data-id="${c.id}" data-field="adresse_mission" value="${escAttr(r.adresse_mission)}" placeholder="Rechercher une adresse…" autocomplete="off" class="addr-input">
           <div class="addr-status"></div>
           <ul class="addr-suggestions" hidden></ul>
         </td>
-        <td>
+        <td data-label="Tags">
           <label class="checkbox-row"><input type="checkbox" data-id="${c.id}" data-field="tag_haut_potentiel" ${r.tag_haut_potentiel ? "checked" : ""} ${hpDisabled ? "disabled" : ""}> Haut potentiel</label>
           <label class="checkbox-row"><input type="checkbox" data-id="${c.id}" data-field="tag_en_fragilite" ${r.tag_en_fragilite ? "checked" : ""} ${otherTagsDisabled ? "disabled" : ""}> En fragilité</label>
           <label class="checkbox-row"><input type="checkbox" data-id="${c.id}" data-field="tag_consultant_isole" ${r.tag_consultant_isole ? "checked" : ""} ${otherTagsDisabled ? "disabled" : ""}> Consultant isolé</label>

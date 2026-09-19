@@ -142,6 +142,10 @@ avec des exemples — sauvegarde tes données avant si besoin.
     Sectoriel` si hors UO. Affiché dans le graphe par un lien pointillé sarcelle. Une
     personne suivie seulement par son référent (réunion commune avec lui, aucune avec
     SM/Manager/CP) reçoit une alerte **jaune** ; aucune réunion du tout reste **rouge**.
+  - Le compte de référence propose en autocomplétion les comptes déjà saisis (recherche
+    sans accent ni casse ; un compte retapé avec une autre casse reprend l'orthographe
+    existante). La saisie libre reste possible pour un nouveau compte.
+  - Les collaborateurs sont toujours affichés par leur nom, sans identifiant.
   - Dans l'éditeur, les listes Manager / Chef de projet / Consultant référent se filtrent
     en tapant (Entrée = premier résultat, Échap = annuler).
   - `adresse_mission` / `lat` / `lon` : une seule adresse par personne (le site de la
@@ -211,6 +215,14 @@ en dessous, chacune avec sa case "Afficher" et ses réglages propres.
   ses relations directes. Cliquer dessus épingle l'affichage et zoome sur son
   entourage ; cliquer dans le vide réinitialise la vue. La recherche retrouve aussi
   les réunions d'équipe par leur nom.
+
+## Responsive
+
+Toutes les pages ont la balise viewport. Au-dessus de 900 px, le tableau de rattachements
+occupe toute la largeur et défile dans son propre cadre (en-tête figé, barre de
+défilement horizontale toujours visible). En dessous, chaque ligne des tableaux d'édition
+devient une carte ; la visualisation (graphe ou carte) s'empile avec sa légende en dessous
+et la page défile.
 
 ## Charte graphique
 
