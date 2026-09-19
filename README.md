@@ -135,8 +135,15 @@ avec des exemples — sauvegarde tes données avant si besoin.
     prenom, poste, senior_manager_id`) doit être réordonné une fois : `python
     scripts/migrate_collab_column_order.py chemin/vers/collaborateurs.xlsx`.
 - **rattachements.xlsx** → onglet Rattachements : `id, manager_id,
-  chef_de_projet_id, compte_reference, adresse_mission, lat, lon, tag_haut_potentiel,
+  chef_de_projet_id, consultant_referent_id, compte_reference, adresse_mission, lat, lon, tag_haut_potentiel,
   tag_en_fragilite, tag_consultant_isole, date_maj`.
+  - `consultant_referent_id` : facultatif, réservé aux Consultants (la colonne est grisée
+    pour SM/Manager/CP/DP) — id d'un autre Consultant qui assure le suivi, ou `Consultant
+    Sectoriel` si hors UO. Affiché dans le graphe par un lien pointillé sarcelle. Une
+    personne suivie seulement par son référent (réunion commune avec lui, aucune avec
+    SM/Manager/CP) reçoit une alerte **jaune** ; aucune réunion du tout reste **rouge**.
+  - Dans l'éditeur, les listes Manager / Chef de projet / Consultant référent se filtrent
+    en tapant (Entrée = premier résultat, Échap = annuler).
   - `adresse_mission` / `lat` / `lon` : une seule adresse par personne (le site de la
     mission, pas le domicile), saisie avec autocomplétion dans l'éditeur de rattachements
     (API de géocodage de la Géoplateforme/IGN, gratuite, sans clé). Les coordonnées sont

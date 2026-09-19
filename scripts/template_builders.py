@@ -34,11 +34,11 @@ COLLAB_HEADERS = ["id", "nom", "prenom", "poste", "senior_manager_id", "id_sugge
 COLLAB_WIDTHS = [8, 18, 18, 18, 16, 13, 11]
 
 RATTACH_HEADERS = [
-    "id", "manager_id", "chef_de_projet_id", "compte_reference",
+    "id", "manager_id", "chef_de_projet_id", "consultant_referent_id", "compte_reference",
     "adresse_mission", "lat", "lon",
     "tag_haut_potentiel", "tag_en_fragilite", "tag_consultant_isole", "date_maj",
 ]
-RATTACH_WIDTHS = [8, 12, 18, 18, 40, 10, 10, 18, 16, 20, 12]
+RATTACH_WIDTHS = [8, 12, 18, 18, 18, 40, 10, 10, 18, 16, 20, 12]
 
 POINT_HEADERS = [
     "id", "nom", "animateur_id", "participants_ids", "type", "periodicite",
@@ -180,6 +180,8 @@ def build_rattachements_workbook(rows=None):
         ("- manager_id / chef_de_projet_id : id d'un autre collaborateur, ou 'Manager", NORMAL_FONT),
         ("  Sectoriel' / 'CP Sectoriel' si hors de cette UO. Peuvent pointer vers quelqu'un", NORMAL_FONT),
         ("  rattaché à un AUTRE Senior Manager — pas de contrainte de périmètre.", NORMAL_FONT),
+        ("- consultant_referent_id : facultatif, réservé aux Consultants — id d'un autre", NORMAL_FONT),
+        ("  Consultant qui assure le suivi, ou 'Consultant Sectoriel' si hors de cette UO.", NORMAL_FONT),
         ("- compte_reference : client chez qui la personne travaille.", NORMAL_FONT),
         ("- adresse_mission / lat / lon : adresse du site de mission (PAS le domicile) et ses", NORMAL_FONT),
         ("  coordonnées, renseignées par l'autocomplétion de editeur-rattachements.html.", NORMAL_FONT),
@@ -197,7 +199,7 @@ def build_rattachements_workbook(rows=None):
             cell = ws.cell(row=r, column=col, value=row.get(name, ""))
             cell.font = EXAMPLE_FONT if row.get("_example") else NORMAL_FONT
 
-    for name in ["id", "manager_id", "chef_de_projet_id", "compte_reference", "date_maj"]:
+    for name in ["id", "manager_id", "chef_de_projet_id", "consultant_referent_id", "compte_reference", "date_maj"]:
         col = RATTACH_HEADERS.index(name) + 1
         for r in range(2, last_row + 1):
             c2 = ws.cell(row=r, column=col)

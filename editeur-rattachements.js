@@ -150,6 +150,7 @@
       rattach[norm(r.id)] = {
         manager_id: norm(r.manager_id),
         chef_de_projet_id: norm(r.chef_de_projet_id),
+        consultant_referent_id: norm(r.consultant_referent_id),
         compte_reference: norm(r.compte_reference),
         adresse_mission: norm(r.adresse_mission),
         lat: norm(r.lat),
@@ -236,6 +237,7 @@
       rattach[id] = {
         manager_id: "",
         chef_de_projet_id: "",
+        consultant_referent_id: "",
         compte_reference: "",
         adresse_mission: "",
         lat: "",
@@ -255,20 +257,101 @@
     return collaborateurs.find((c) => c.id === id);
   }
 
-  function optionsFor(poste, sentinel) {
-    const list = collaborateurs.filter((c) => {
-      if (poste === "cp_dp") return c.poste === "Chef de projet" || c.poste === "Directeur de projet";
-      return c.poste === poste;
-    });
-    let html = `<option value="">—</option><option value="${sentinel}">${sentinel}</option>`;
-    list
-      .slice()
+  // --- Listes de rattachement avec saisie filtrante (Manager / Chef de projet / Consultant référent) ---
+  // Une liste déroulante classique + un champ de saisie qui filtre cette même liste
+  // (sans accent ni casse). Tant qu'aucune option n'est choisie, le champ retrouve sa valeur.
+  const NONE_LABEL = "— (aucun)";
+  const COMBO_KINDS = {
+    manager_id: { sentinel: "Manager Sectoriel", pool: (c) => c.poste === "Manager" },
+    chef_de_projet_id: {
+      sentinel: "CP Sectoriel",
+      pool: (c) => c.poste === "Chef de projet" || c.poste === "Directeur de projet",
+    },
+    consultant_referent_id: { sentinel: "Consultant Sectoriel", pool: (c) => c.poste === "Consultant" },
+  };
+  const fold = (t) => String(t).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+  function comboOptions(field, ownId) {
+    const kind = COMBO_KINDS[field];
+    const people = collaborateurs
+      .filter((c) => c.id !== ownId && kind.pool(c))
       .sort((a, b) => collabName(a).localeCompare(collabName(b)))
-      .forEach((c) => {
-        html += `<option value="${c.id}">${collabName(c)} (${c.id})</option>`;
-      });
-    return html;
+      .map((c) => ({ value: c.id, label: `${collabName(c)} (${c.id})` }));
+    return [{ value: "", label: NONE_LABEL }, { value: kind.sentinel, label: kind.sentinel }, ...people];
   }
+
+  function comboLabel(field, value) {
+    if (!value) return "";
+    if (value === COMBO_KINDS[field].sentinel) return value;
+    const c = findCollabById(value);
+    return c ? `${collabName(c)} (${c.id})` : value;
+  }
+
+  function openComboList(input, filterText) {
+    const list = input.closest(".combo-cell").querySelector(".combo-list");
+    const q = fold(filterText || "");
+    const opts = comboOptions(input.dataset.field, input.dataset.id).filter((o) => !q || fold(o.label).includes(q));
+    list.innerHTML = opts.length
+      ? opts.map((o) => `<li data-value="${escAttr(o.value)}">${escAttr(o.label)}</li>`).join("")
+      : `<li class="addr-none">Aucun résultat</li>`;
+    list.hidden = false;
+  }
+
+  function closeComboList(input) {
+    input.closest(".combo-cell").querySelector(".combo-list").hidden = true;
+  }
+
+  function commitCombo(input, value) {
+    getRattach(input.dataset.id)[input.dataset.field] = value;
+    input.value = comboLabel(input.dataset.field, value);
+    closeComboList(input);
+    input.classList.remove("field-error");
+  }
+
+  els.tableBody.addEventListener("focusin", (e) => {
+    const input = e.target.closest(".combo-input");
+    if (!input) return;
+    input.select();
+    openComboList(input, "");
+  });
+  els.tableBody.addEventListener("input", (e) => {
+    const input = e.target.closest(".combo-input");
+    if (input) openComboList(input, input.value);
+  });
+  els.tableBody.addEventListener("keydown", (e) => {
+    const input = e.target.closest(".combo-input");
+    if (!input) return;
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const first = input.closest(".combo-cell").querySelector(".combo-list li[data-value]");
+      if (first) commitCombo(input, first.dataset.value);
+      input.blur();
+    } else if (e.key === "Escape") {
+      input.blur();
+    }
+  });
+  // mousedown (et non click) : le champ ne doit pas perdre le focus avant le choix.
+  els.tableBody.addEventListener("mousedown", (e) => {
+    const li = e.target.closest(".combo-list li[data-value]");
+    if (!li) return;
+    e.preventDefault();
+    const input = li.closest(".combo-cell").querySelector(".combo-input");
+    commitCombo(input, li.dataset.value);
+    input.blur();
+  });
+  els.tableBody.addEventListener("focusout", (e) => {
+    const input = e.target.closest(".combo-input");
+    if (!input) return;
+    // Texte tapé sans choix d'option : on revient à la valeur réellement enregistrée.
+    const typed = input.value.trim();
+    const current = comboLabel(input.dataset.field, getRattach(input.dataset.id)[input.dataset.field]);
+    if (typed && typed !== current) {
+      input.classList.add("field-error");
+      setTimeout(() => input.classList.remove("field-error"), 1500);
+    }
+    input.value = current;
+    closeComboList(input);
+  });
 
   // Un collaborateur est "nouveau" s'il n'a aucune ligne dans rattachements.xlsx chargé —
   // mis en avant en tête de liste pour qu'on pense à le renseigner.
@@ -395,11 +478,13 @@
     setAddrStatus(td, r);
   }
 
+  function comboCellHtml(id, field, value, disabled) {
+    return `<td class="combo-cell"><input type="text" class="combo-input" data-id="${id}" data-field="${field}" value="${escAttr(comboLabel(field, value))}" placeholder="—" autocomplete="off" ${disabled ? 'disabled title="Réservé aux consultants"' : ""}><ul class="combo-list" hidden></ul></td>`;
+  }
+
   function render() {
     const filter = norm(els.search.value).toLowerCase();
     const smFilter = els.filterSm.value;
-    const mgrOptions = optionsFor("Manager", "Manager Sectoriel");
-    const cpOptions = optionsFor("cp_dp", "CP Sectoriel");
 
     const matchesPerimeter = (c) => {
       if (!smFilter) return true;
@@ -423,6 +508,9 @@
       const isMgrFamily = c.poste === "Manager" || c.poste === "Chef de projet" || c.poste === "Directeur de projet";
       const hpDisabled = isSM || isMgrFamily;
       const otherTagsDisabled = isSM;
+      // Seuls les consultants peuvent être suivis par un autre consultant.
+      const referentDisabled = isSM || isMgrFamily;
+      if (referentDisabled) r.consultant_referent_id = "";
       if (isSM) {
         r.tag_haut_potentiel = false;
         r.tag_en_fragilite = false;
@@ -442,8 +530,9 @@
           ${isNewSinceSnapshot(c.id) ? `<span class="badge-poste" style="background:var(--status-good)">Nouveau</span>` : ""}
         </td>
         <td>${smLabel}</td>
-        <td><select data-id="${c.id}" data-field="manager_id">${mgrOptions}</select></td>
-        <td><select data-id="${c.id}" data-field="chef_de_projet_id">${cpOptions}</select></td>
+        ${comboCellHtml(c.id, "manager_id", r.manager_id, false)}
+        ${comboCellHtml(c.id, "chef_de_projet_id", r.chef_de_projet_id, false)}
+        ${comboCellHtml(c.id, "consultant_referent_id", r.consultant_referent_id, referentDisabled)}
         <td><input type="text" data-id="${c.id}" data-field="compte_reference" value="${r.compte_reference}" placeholder="À renseigner" class="${r.compte_reference ? "" : "field-empty"}" style="width:100%;padding:5px 7px;border:1px solid var(--gridline);border-radius:6px;background:var(--surface-1);color:var(--text-primary)"></td>
         <td class="addr-cell">
           <input type="text" data-id="${c.id}" data-field="adresse_mission" value="${escAttr(r.adresse_mission)}" placeholder="Rechercher une adresse…" autocomplete="off" class="addr-input">
@@ -457,12 +546,10 @@
         </td>
       `;
       setAddrStatus(tr.querySelector(".addr-cell"), r);
-      tr.querySelector('[data-field="manager_id"]').value = r.manager_id;
-      tr.querySelector('[data-field="chef_de_projet_id"]').value = r.chef_de_projet_id;
       els.tableBody.appendChild(tr);
     });
 
-    els.tableBody.querySelectorAll("select, input:not(.addr-input)").forEach((el) => {
+    els.tableBody.querySelectorAll("input:not(.addr-input):not(.combo-input)").forEach((el) => {
       el.addEventListener("change", (e) => {
         const id = e.target.dataset.id;
         const field = e.target.dataset.field;
@@ -487,7 +574,7 @@
   });
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".addr-cell")) {
-      els.tableBody.querySelectorAll(".addr-suggestions").forEach((u) => (u.hidden = true));
+      els.tableBody.querySelectorAll(".addr-cell .addr-suggestions").forEach((u) => (u.hidden = true));
     }
   });
 
@@ -497,14 +584,14 @@
   els.btnDownload.addEventListener("click", () => {
     const today = todayISO();
     const rows = [
-      ["id", "manager_id", "chef_de_projet_id", "compte_reference",
+      ["id", "manager_id", "chef_de_projet_id", "consultant_referent_id", "compte_reference",
         "adresse_mission", "lat", "lon",
         "tag_haut_potentiel", "tag_en_fragilite", "tag_consultant_isole", "date_maj"],
     ];
     collaborateurs.forEach((c) => {
       const r = getRattach(c.id);
       rows.push([
-        c.id, r.manager_id, r.chef_de_projet_id, r.compte_reference,
+        c.id, r.manager_id, r.chef_de_projet_id, r.consultant_referent_id, r.compte_reference,
         r.adresse_mission, r.lat, r.lon,
         r.tag_haut_potentiel ? "Oui" : "Non",
         r.tag_en_fragilite ? "Oui" : "Non",

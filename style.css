@@ -31,6 +31,7 @@
   --ring-fragile: #7dd3fc;
   --gap-warning: var(--status-critical);
   --edge-hierarchy: #9a9890;
+  --edge-referent: #1b8a7a;
   --edge-anim: var(--slot-orange);
   --edge-particip: #c8ac97;
 }
@@ -68,6 +69,7 @@
     --ring-fragile: #7dd3fc;
     --gap-warning: var(--status-critical);
     --edge-hierarchy: #5c5b56;
+    --edge-referent: #4fc3b5;
     --edge-anim: var(--slot-orange);
     --edge-particip: #6b584a;
   }
@@ -682,7 +684,7 @@ select option { color: var(--text-primary); }
 }
 .addr-status { font-size: 11px; color: var(--gap-warning); min-height: 14px; margin-top: 2px; }
 .addr-status.addr-ok { color: var(--status-good); }
-.addr-suggestions {
+.addr-suggestions, .combo-list {
   position: absolute;
   z-index: 20;
   left: 0;
@@ -695,11 +697,11 @@ select option { color: var(--text-primary); }
   border-radius: 6px;
   box-shadow: 0 6px 20px rgba(0,0,0,0.18);
 }
-.addr-suggestions[hidden] { display: none; }
-.addr-suggestions li { padding: 6px 10px; font-size: 12.5px; cursor: pointer; }
-.addr-suggestions li:hover { background: var(--gridline); }
-.addr-suggestions li.addr-none { color: var(--text-muted); cursor: default; }
-.addr-suggestions li.addr-none:hover { background: none; }
+.addr-suggestions[hidden], .combo-list[hidden] { display: none; }
+.addr-suggestions li, .combo-list li { padding: 6px 10px; font-size: 12.5px; cursor: pointer; }
+.addr-suggestions li:hover, .combo-list li:hover { background: var(--gridline); }
+.addr-suggestions li.addr-none, .combo-list li.addr-none { color: var(--text-muted); cursor: default; }
+.addr-suggestions li.addr-none:hover, .combo-list li.addr-none:hover { background: none; }
 
 /* ---------- Vue Carte ---------- */
 button.tab-secondary { border: 0; background: none; font-family: inherit; cursor: pointer; }
@@ -743,3 +745,24 @@ body.view-carte #row-graph-options { display: none; }
 .carto-tip .tt-row { margin-top: 3px; }
 .carto-tip .tt-label { color: var(--text-muted); }
 .carto-tip .tt-pills { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+
+/* ---------- Listes filtrables (Manager / CP / Consultant référent) ---------- */
+.combo-cell { position: relative; min-width: 170px; }
+.combo-list { max-height: 240px; overflow-y: auto; }
+.combo-input {
+  width: 100%;
+  padding: 5px 7px;
+  border: 1px solid var(--gridline);
+  border-radius: 6px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+.combo-input:disabled { opacity: 0.45; cursor: not-allowed; }
+.combo-input.field-error { border-color: var(--status-critical); }
+
+/* ---------- Consultant référent ---------- */
+.legend-line.dashdot {
+  border-top: 0;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, currentColor 0 6px, transparent 6px 9px, currentColor 9px 11px, transparent 11px 14px);
+}

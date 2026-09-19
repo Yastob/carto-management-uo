@@ -14,6 +14,7 @@
   const RATTACH_TEXT_FIELDS = [
     { key: "manager_id", label: "Manager" },
     { key: "chef_de_projet_id", label: "Chef de projet" },
+    { key: "consultant_referent_id", label: "Consultant référent" },
     { key: "compte_reference", label: "Compte de référence" },
   ];
 
@@ -21,6 +22,7 @@
   // Zone de contrôle pour l'Île-de-France (rectangle large) : sert uniquement à signaler
   // une adresse manifestement hors zone, pas à filtrer.
   const IDF_BOUNDS = { latMin: 48.1, latMax: 49.25, lonMin: 1.4, lonMax: 3.6 };
+  const CONSULTANT_SECTORIEL = "Consultant Sectoriel";
   const parseCoord = (v) => {
     const n = parseFloat(String(v).replace(",", "."));
     return Number.isFinite(n) ? n : null;
@@ -364,7 +366,7 @@
   // seul fichier dit "Oui") pour la même raison — un "Non" par défaut ne doit jamais
   // effacer un "Oui" saisi ailleurs. Un vrai conflit (2 fichiers, 2 valeurs non vides
   // différentes) est remonté dans le rapport de cohérence plutôt que tranché au hasard.
-  function mergeRattachFiles(files, collabIds, nameOf) {
+  function mergeRattachFiles(files, collabIds, nameOf, posteOf) {
     const byId = {};
     const errors = [];
     const warnings = [];
@@ -428,6 +430,7 @@
       rattachById[id] = {
         manager_id: entry.fields.manager_id ? entry.fields.manager_id.value : "",
         chef_de_projet_id: entry.fields.chef_de_projet_id ? entry.fields.chef_de_projet_id.value : "",
+        consultant_referent_id: entry.fields.consultant_referent_id ? entry.fields.consultant_referent_id.value : "",
         compte_reference: entry.fields.compte_reference ? entry.fields.compte_reference.value : "",
         adresse_mission: entry.adresse ? entry.adresse.value : "",
         lat: entry.adresse ? entry.adresse.lat : null,
@@ -436,6 +439,34 @@
         date_maj: entry.date_maj,
       };
     });
+    // Consultant référent : réservé aux Consultants, et le référent doit lui-même être un
+    // Consultant de cette UO (ou "Consultant Sectoriel" pour quelqu'un hors UO).
+    Object.entries(rattachById).forEach(([id, r]) => {
+      const ref = r.consultant_referent_id;
+      if (!ref) return;
+      if (posteOf(id) && posteOf(id) !== "Consultant") {
+        warnings.push(
+          `${nameOf(id)} (${id}) est ${posteOf(id)} : un consultant référent ne peut être renseigné que pour un Consultant. Ce lien est ignoré dans la cartographie.`
+        );
+        r.consultant_referent_id = "";
+        return;
+      }
+      if (ref === CONSULTANT_SECTORIEL) return;
+      if (ref === id) {
+        errors.push(`${nameOf(id)} (${id}) est renseigné comme son propre consultant référent. Ce lien est ignoré.`);
+        r.consultant_referent_id = "";
+      } else if (collabIds && !collabIds.has(ref)) {
+        errors.push(
+          `${nameOf(id)} (${id}) a pour consultant référent l'id "${ref}", introuvable dans collaborateurs.xlsx. Ce lien est ignoré.`
+        );
+        r.consultant_referent_id = "";
+      } else if (posteOf(ref) && posteOf(ref) !== "Consultant") {
+        warnings.push(
+          `${nameOf(id)} (${id}) a pour consultant référent ${nameOf(ref)}, qui est ${posteOf(ref)} et non Consultant — utilise plutôt les colonnes Manager / Chef de projet.`
+        );
+      }
+    });
+
     Object.entries(rattachById).forEach(([id, r]) => {
       if (!r.adresse_mission) return;
       if (r.lat === null || r.lon === null) {
@@ -533,8 +564,11 @@
       });
     const collabIds = raw.collab ? new Set(Object.keys(idToName)) : null;
     const nameOf = (id) => idToName[id] || id;
+    const posteByIdMap = {};
+    (raw.collab || []).filter((r) => norm(r.id)).forEach((r) => (posteByIdMap[norm(r.id)] = norm(r.poste)));
+    const posteOf = (id) => posteByIdMap[id] || "";
 
-    const { rattachById, errors: rattachErrors, warnings: rattachWarnings } = mergeRattachFiles(raw.rattachFiles, collabIds, nameOf);
+    const { rattachById, errors: rattachErrors, warnings: rattachWarnings } = mergeRattachFiles(raw.rattachFiles, collabIds, nameOf, posteOf);
     const { points, errors: pointErrors, warnings } = mergePointsFiles(raw.pointsFiles, collabIds, nameOf);
 
     const collaborateurs = (raw.collab || [])
@@ -544,6 +578,7 @@
         const rat = rattachById[id] || {
           manager_id: "",
           chef_de_projet_id: "",
+          consultant_referent_id: "",
           compte_reference: "",
           adresse_mission: "",
           lat: null,
@@ -624,15 +659,22 @@
   // Objectif final de l'outil : ce collaborateur partage-t-il au moins un point
   // (équipe ou individuel) avec l'un de ses 3 responsables ? Si aucun responsable
   // n'est renseigné (sommet de l'UO), la question ne s'applique pas.
-  function isSeenByResponsable(c) {
+  // Résultat à 3 niveaux :
+  //   "ok"       — réunion commune avec un SM/Manager/CP (ou aucun responsable à qui en demander)
+  //   "referent" — aucune avec SM/Manager/CP, mais une avec son consultant référent (alerte jaune)
+  //   "gap"      — aucune réunion commune avec un responsable ni avec un référent (alerte rouge)
+  function followUpStatus(c) {
+    const referent = findCollab(c.consultant_referent_id) ? c.consultant_referent_id : "";
     const responsables = [c.senior_manager_id, c.manager_id, c.chef_de_projet_id].filter(Boolean);
-    if (!responsables.length) return true;
+    if (!responsables.length && !referent) return "ok";
     const own = pointIdsInvolving(c.id);
-    if (!own.size) return false;
-    return responsables.some((rid) => {
+    const shares = (rid) => {
       const respPoints = pointIdsInvolving(rid);
       return [...own].some((pid) => respPoints.has(pid));
-    });
+    };
+    if (own.size && responsables.some(shares)) return "ok";
+    if (own.size && referent && shares(referent)) return "referent";
+    return "gap";
   }
 
   function pointsForCollab(id) {
@@ -715,10 +757,10 @@
       const mutedColor = cssVar("--node-person-muted");
       const displayColor = isContextual ? mutedColor : roleColor;
       const isFragile = !isContextual && c.tags.includes("En fragilité");
-      const gap = !isSeenByResponsable(c);
+      const followUp = followUpStatus(c);
       nodes.push({
         id: "c:" + c.id,
-        label: collabName(c) + (role && role !== "SM" ? ` (${c.poste})` : role === "SM" ? " (SM)" : "") + (gap ? " *⚠*" : ""),
+        label: collabName(c) + (role && role !== "SM" ? ` (${c.poste})` : role === "SM" ? " (SM)" : "") + (followUp === "gap" ? " *⚠*" : followUp === "referent" ? " `⚠`" : ""),
         shape: "dot",
         size,
         color: {
@@ -731,6 +773,9 @@
           size: 13,
           multi: "md",
           bold: { color: cssVar("--gap-warning"), size: 18, mod: "bold" },
+          // Alerte jaune (suivi uniquement par un consultant référent) : groupe "mono" de vis-network,
+          // seul autre style de police coloré disponible dans le balisage markdown.
+          mono: { color: cssVar("--status-warning"), size: 18, face: "arial", mod: "bold" },
         },
         borderWidth: isFragile ? 3 : 1,
         opacity: isContextual ? 0.55 : 1,
@@ -772,6 +817,18 @@
             color: { color: cssVar("--edge-hierarchy") },
             width: 1.5,
             _kind: "cp",
+          });
+        }
+        if (c.consultant_referent_id && collabIds.has(c.consultant_referent_id) && !contextualIds.has(c.consultant_referent_id)) {
+          edges.push({
+            id: "cr:" + c.consultant_referent_id + ">" + c.id,
+            from: "c:" + c.consultant_referent_id,
+            to: "c:" + c.id,
+            arrows: "to",
+            dashes: [8, 3, 2, 3],
+            color: { color: cssVar("--edge-referent") },
+            width: 1.5,
+            _kind: "referent",
           });
         }
       }
@@ -1128,10 +1185,12 @@
   }
 
   function updateStats(collabs, points) {
-    const nbGap = collabs.filter((c) => !isSeenByResponsable(c)).length;
+    const nbGap = collabs.filter((c) => followUpStatus(c) === "gap").length;
+    const nbReferent = collabs.filter((c) => followUpStatus(c) === "referent").length;
     els.stats.textContent =
       `${collabs.length} collaborateur(s) · ${points.length} réunion(s)` +
-      (nbGap ? ` · ⚠ ${nbGap} sans réunion commune avec un responsable` : "");
+      (nbGap ? ` · ⚠ ${nbGap} sans réunion commune avec un responsable` : "") +
+      (nbReferent ? ` · ⚠ ${nbReferent} suivi(s) uniquement par un consultant référent` : "");
   }
 
   function tagPillsHtml(tags) {
@@ -1170,6 +1229,9 @@
     const sm = c.senior_manager_id ? findCollab(c.senior_manager_id) : null;
     const mgr = c.manager_id ? findCollab(c.manager_id) : null;
     const cp = c.chef_de_projet_id ? findCollab(c.chef_de_projet_id) : null;
+    const ref = c.consultant_referent_id ? findCollab(c.consultant_referent_id) : null;
+    const followUp = followUpStatus(c);
+    const referentOf = encadresPar(c.id, "consultant_referent_id");
     const pts = pointsForCollab(c.id);
     const smOf = encadresPar(c.id, "senior_manager_id");
     const mgrOf = encadresPar(c.id, "manager_id");
@@ -1181,13 +1243,16 @@
       <div class="tt-row"><span class="tt-label">Senior Manager :</span> ${sm ? collabName(sm) : c.senior_manager_id || "— (SM de tête)"}</div>
       ${mgr ? `<div class="tt-row"><span class="tt-label">Manager :</span> ${collabName(mgr)}</div>` : c.manager_id ? `<div class="tt-row"><span class="tt-label">Manager :</span> ${c.manager_id}</div>` : ""}
       ${cp ? `<div class="tt-row"><span class="tt-label">Chef de projet :</span> ${collabName(cp)}</div>` : c.chef_de_projet_id ? `<div class="tt-row"><span class="tt-label">Chef de projet :</span> ${c.chef_de_projet_id}</div>` : ""}
+      ${ref ? `<div class="tt-row"><span class="tt-label">Consultant référent :</span> ${collabName(ref)}</div>` : c.consultant_referent_id ? `<div class="tt-row"><span class="tt-label">Consultant référent :</span> ${c.consultant_referent_id}</div>` : ""}
       ${c.compte_reference ? `<div class="tt-row"><span class="tt-label">Compte de référence :</span> ${c.compte_reference}</div>` : ""}
       ${tagPillsHtml(c.tags)}
       ${smOf.length ? `<div class="tt-row" style="margin-top:8px"><span class="tt-label">SM de :</span> ${smOf.join(", ")}</div>` : ""}
       ${mgrOf.length ? `<div class="tt-row"><span class="tt-label">Manager de :</span> ${mgrOf.join(", ")}</div>` : ""}
       ${cpOf.length ? `<div class="tt-row"><span class="tt-label">CP de :</span> ${cpOf.join(", ")}</div>` : ""}
+      ${referentOf.length ? `<div class="tt-row"><span class="tt-label">Consultant référent de :</span> ${referentOf.join(", ")}</div>` : ""}
       ${pts.length ? `<div class="tt-row" style="margin-top:8px"><span class="tt-label">Réunions :</span><ul class="tt-list">${pts.map((x) => `<li>${x.point.nom || "Réunion individuelle"} — ${x.role} (${x.point.periodicite})</li>`).join("")}</ul></div>` : ""}
-      ${!isSeenByResponsable(c) ? `<div class="tt-row" style="margin-top:8px;color:var(--gap-warning)">⚠ Aucune réunion commune avec un responsable (SM/Manager/CP)</div>` : ""}
+      ${followUp === "gap" ? `<div class="tt-row" style="margin-top:8px;color:var(--gap-warning)">⚠ Aucune réunion commune avec un responsable (SM/Manager/CP)</div>` : ""}
+      ${followUp === "referent" ? `<div class="tt-row" style="margin-top:8px;color:var(--status-warning)">⚠ Réunion commune uniquement avec son consultant référent (aucune avec SM/Manager/CP)</div>` : ""}
     `);
     positionTooltipAtMouse();
   }
