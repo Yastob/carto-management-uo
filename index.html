@@ -17,6 +17,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
 <script src="xlsx-helpers.js"></script>
 <script src="shared-state.js"></script>
+<script src="google-sheets.js"></script>
 </head>
 <body>
 <div id="app">
@@ -46,6 +47,17 @@
           <span class="loaded-name" id="loaded-collab-name"></span>
           <button class="btn btn-secondary btn-small" id="btn-change-collab">Changer de fichier</button>
         </div>
+        <div class="gs-import" data-kind="collab">
+          <div class="gs-row">
+            <span class="gs-or">ou</span>
+            <button type="button" class="btn btn-secondary btn-small gs-connect">Se connecter avec Google</button>
+          </div>
+          <div class="gs-form" hidden>
+            <input type="text" class="gs-url" placeholder="Lien du Google Sheet">
+            <button type="button" class="btn btn-secondary btn-small gs-load">Charger</button>
+          </div>
+          <div class="gs-status"></div>
+        </div>
       </div>
 
       <div class="upload-step" id="step-rattach">
@@ -59,6 +71,17 @@
           <input type="file" id="file-rattach" accept=".xlsx" multiple>
         </label>
         <div id="loaded-rattach-list" class="loaded-files-list"></div>
+        <div class="gs-import" data-kind="rattach">
+          <div class="gs-row">
+            <span class="gs-or">ou</span>
+            <button type="button" class="btn btn-secondary btn-small gs-connect">Se connecter avec Google</button>
+          </div>
+          <div class="gs-form" hidden>
+            <input type="text" class="gs-url" placeholder="Lien du Google Sheet">
+            <button type="button" class="btn btn-secondary btn-small gs-load">Ajouter</button>
+          </div>
+          <div class="gs-status"></div>
+        </div>
       </div>
 
       <div class="upload-step" id="step-points">
@@ -72,6 +95,17 @@
           <input type="file" id="file-points" accept=".xlsx" multiple>
         </label>
         <div id="loaded-points-list" class="loaded-files-list"></div>
+        <div class="gs-import" data-kind="points">
+          <div class="gs-row">
+            <span class="gs-or">ou</span>
+            <button type="button" class="btn btn-secondary btn-small gs-connect">Se connecter avec Google</button>
+          </div>
+          <div class="gs-form" hidden>
+            <input type="text" class="gs-url" placeholder="Lien du Google Sheet">
+            <button type="button" class="btn btn-secondary btn-small gs-load">Ajouter</button>
+          </div>
+          <div class="gs-status"></div>
+        </div>
       </div>
 
       <div id="consistency-report" class="consistency-report" style="display:none"></div>

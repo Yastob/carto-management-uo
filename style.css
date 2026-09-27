@@ -857,3 +857,23 @@ main.editor-main { display: block; overflow-x: hidden; }
 .map-tip-alert-referent { color: var(--status-warning); }
 .map-name-gap { color: var(--gap-warning); font-weight: 700; }
 .map-name-referent { color: var(--status-warning); font-weight: 700; }
+
+/* ---------- Import Google Sheets (alternative au fichier local) ---------- */
+.gs-import { margin-top: 8px; }
+.gs-row { display: flex; align-items: center; gap: 8px; }
+.gs-or { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+.gs-form { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.gs-form[hidden] { display: none; }
+.gs-url {
+  flex: 1;
+  min-width: 200px;
+  padding: 7px 10px;
+  border: 1px solid var(--gridline);
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+.gs-status { font-size: 12px; margin-top: 4px; min-height: 16px; color: var(--text-muted); }
+.gs-status.gs-error { color: var(--status-critical); }
+.gs-status.gs-ok { color: var(--status-good); }

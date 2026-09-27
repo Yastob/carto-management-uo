@@ -26,6 +26,35 @@ window.CartoXlsx = (function () {
     return candidate || (wb.SheetNames || [])[0];
   }
 
+  // Même règle que findDataSheetName, mais pour une liste d'onglets {name, hidden} générique
+  // (utilisé par l'import Google Sheets, où les onglets viennent de l'API et non d'un
+  // classeur XLSX local).
+  function pickDataTabName(tabs) {
+    const candidate = (tabs || []).find(
+      (t) => !t.hidden && !NON_DATA_SHEET_NAMES.includes(String(t.name).trim().toLowerCase())
+    );
+    return (candidate || (tabs || [])[0] || {}).name;
+  }
+
+  // Convertit une grille brute (tableau de tableaux, tel que renvoyé par l'API Sheets ou par
+  // XLSX.utils.sheet_to_json({header:1})) en lignes-objets, 1ère ligne = en-têtes — équivalent
+  // générique de XLSX.utils.sheet_to_json({defval:""}) pour une source qui n'est pas un
+  // classeur SheetJS.
+  function gridToRows(grid) {
+    if (!grid || !grid.length) return [];
+    const headers = grid[0].map((h) => String(h || "").trim());
+    return grid
+      .slice(1)
+      .filter((row) => row.some((c) => String(c === undefined || c === null ? "" : c).trim() !== ""))
+      .map((row) => {
+        const obj = {};
+        headers.forEach((h, i) => {
+          if (h) obj[h] = row[i] === undefined || row[i] === null ? "" : row[i];
+        });
+        return obj;
+      });
+  }
+
   function cell(row, i) {
     const v = row[i];
     return v === undefined || v === null ? "" : String(v).trim();
@@ -63,12 +92,12 @@ window.CartoXlsx = (function () {
     }
   }
 
-  function readCollaborateurs(wb) {
-    const name = findDataSheetName(wb);
-    const sheet = name && wb.Sheets[name];
-    if (!sheet) return [];
-    const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", blankrows: false });
-    const rows = grid
+  // Coeur du parsing positionnel, partagé entre un classeur XLSX local (readCollaborateurs)
+  // et une grille rapatriée de Google Sheets (gridToCollaborateurs) : seule la provenance
+  // de `grid` diffère, la règle "1ère ligne = en-tête ignoré, colonnes 1-5 dans cet ordre"
+  // est strictement la même dans les deux cas.
+  function collaborateursFromGrid(grid) {
+    const rows = (grid || [])
       .slice(1)
       .filter((row) => row.some((c) => String(c).trim() !== ""))
       .map((row) => ({
@@ -82,5 +111,13 @@ window.CartoXlsx = (function () {
     return rows;
   }
 
-  return { readCollaborateurs };
+  function readCollaborateurs(wb) {
+    const name = findDataSheetName(wb);
+    const sheet = name && wb.Sheets[name];
+    if (!sheet) return [];
+    const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", blankrows: false });
+    return collaborateursFromGrid(grid);
+  }
+
+  return { readCollaborateurs, pickDataTabName, gridToRows, collaborateursFromGrid };
 })();

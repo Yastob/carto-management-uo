@@ -74,6 +74,12 @@ Chaque message précise le(s) fichier(s) concerné(s) pour permettre une correct
    sont couverts par aucune réunion (individuelle ou d'équipe) active.
 4. Ouvre `index.html`, charge les fichiers → cartographie interactive.
 
+**Alternative : Google Sheets.** Sur la page Visualisation, chacune des 3 zones de dépôt
+de fichier propose aussi « Se connecter avec Google » pour charger directement un
+classeur Google Sheets restreint à l'organisation, en lecture seule, sans jamais
+télécharger de fichier. Désactivé par défaut (bouton grisé) tant que l'intégration n'a
+pas été configurée pour l'instance mc2i — voir [GOOGLE_SHEETS_SETUP.md](GOOGLE_SHEETS_SETUP.md).
+
 Pour mettre à jour plus tard : recharge le fichier existant dans l'éditeur concerné
 (ex. `rattachements.xlsx` dans editeur-rattachements.html) avant de continuer à
 l'enrichir, puis re-télécharge. `collaborateurs.xlsx` s'édite directement dans Excel

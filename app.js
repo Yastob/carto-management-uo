@@ -279,6 +279,85 @@
     updateConsistencyPreview();
   });
 
+  // --- Import Google Sheets, alternative au fichier local (voir google-sheets.js) ---
+  // Reste inactif (bouton désactivé) tant que l'intégration n'a pas été configurée pour
+  // cette instance mc2i (identifiant OAuth réel) : cf. GOOGLE_SHEETS_SETUP.md.
+  document.querySelectorAll(".gs-import").forEach((box) => {
+    const kind = box.dataset.kind; // "collab" | "rattach" | "points"
+    const connectBtn = box.querySelector(".gs-connect");
+    const form = box.querySelector(".gs-form");
+    const urlInput = box.querySelector(".gs-url");
+    const loadBtn = box.querySelector(".gs-load");
+    const status = box.querySelector(".gs-status");
+
+    function setStatus(msg, level) {
+      status.textContent = msg || "";
+      status.classList.toggle("gs-error", level === "error");
+      status.classList.toggle("gs-ok", level === "ok");
+    }
+
+    if (!CartoGoogleSheets.isConfigured()) {
+      connectBtn.disabled = true;
+      connectBtn.title = "Intégration Google Sheets non configurée pour cette instance (voir GOOGLE_SHEETS_SETUP.md).";
+    }
+
+    connectBtn.addEventListener("click", async () => {
+      setStatus("Connexion à Google…");
+      try {
+        await CartoGoogleSheets.ensureToken();
+        connectBtn.style.display = "none";
+        form.hidden = false;
+        setStatus("Connecté à Google.", "ok");
+      } catch (err) {
+        setStatus(err.message, "error");
+      }
+    });
+
+    loadBtn.addEventListener("click", async () => {
+      const id = CartoGoogleSheets.parseSpreadsheetId(urlInput.value);
+      if (!id) {
+        setStatus("Lien Google Sheet non reconnu — colle l'URL complète ou l'identifiant du classeur.", "error");
+        return;
+      }
+      setStatus("Chargement…");
+      loadBtn.disabled = true;
+      try {
+        const { title, tabs } = await CartoGoogleSheets.listTabs(id);
+        // Même règle de choix d'onglet que pour un fichier local (ignore lisez-moi/listes/…) :
+        // pas de sélecteur d'onglet dans l'UI, pour rester simple — voir GOOGLE_SHEETS_SETUP.md
+        // si un classeur a besoin d'un onglet de données autre que le premier éligible.
+        const tabName = CartoXlsx.pickDataTabName(tabs);
+        if (!tabName) throw new Error("Ce classeur ne contient aucun onglet.");
+        const grid = await CartoGoogleSheets.fetchGrid(id, tabName);
+        const label = `${title} — ${tabName} (Google Sheets)`;
+
+        if (kind === "collab") {
+          const rows = CartoXlsx.collaborateursFromGrid(grid);
+          CartoState.save("collab", rows);
+          applyCollabRows(rows, label);
+        } else if (kind === "rattach") {
+          const rows = CartoXlsx.gridToRows(grid);
+          raw.rattachFiles.push({ name: label, rows });
+          CartoState.save("rattachFiles", raw.rattachFiles);
+          renderRattachList();
+          updateConsistencyPreview();
+        } else if (kind === "points") {
+          const rows = CartoXlsx.gridToRows(grid);
+          raw.pointsFiles.push({ name: label, rows });
+          CartoState.save("pointsFiles", raw.pointsFiles);
+          renderPointsList();
+          updateConsistencyPreview();
+        }
+        setStatus(`« ${tabName} » chargé (${Math.max(0, grid.length - 1)} ligne(s)).`, "ok");
+        urlInput.value = "";
+      } catch (err) {
+        setStatus(err.message, "error");
+      } finally {
+        loadBtn.disabled = false;
+      }
+    });
+  });
+
   // Restauration depuis la session (changement d'onglet sans réupload).
   (function hydrateFromSession() {
     const savedCollab = CartoState.load("collab");
