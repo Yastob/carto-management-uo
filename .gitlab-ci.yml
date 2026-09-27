@@ -1,0 +1,16 @@
+# Publie le site (statique, sans backend) sur GitLab Pages de l'infra mc2i.
+# Pas de build : app.js/carte.js/etc. sont déjà du JS natif, chargés directement par les
+# pages HTML. Le job copie juste les fichiers du site vers public/, requis par GitLab Pages.
+# data/, scripts/ et README.md ne font pas partie du site servi (data/ est d'ailleurs
+# toujours gitignoré, jamais commité).
+pages:
+  stage: deploy
+  image: alpine:3.20
+  script:
+    - mkdir -p public
+    - cp *.html *.css *.js public/
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
